@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 
 // --- HOOK: HIỆU ỨNG CHỮ ĐÁNH MÁY TERMINAL HIỆN ĐẠI ---
-const useTypewriter = (text, speed = 15, delay = 0, skip = false) => {
+const useTypewriter = (text, speed = 5, delay = 0, skip = false) => {
   const [displayedText, setDisplayedText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
@@ -38,7 +38,7 @@ const useTypewriter = (text, speed = 15, delay = 0, skip = false) => {
   return { displayedText, isTyping };
 };
 
-const TypewriterText = ({ text, speed = 15, delay = 0, className, skip = false, noCursor = false }) => {
+const TypewriterText = ({ text, speed = 5, delay = 0, className, skip = false, noCursor = false }) => {
   const { displayedText, isTyping } = useTypewriter(text, speed, delay, skip);
   return (
     <span className={`${className || ""} [text-shadow:0_0_8px_currentColor] transition-all`}>
@@ -52,25 +52,26 @@ const TypewriterText = ({ text, speed = 15, delay = 0, className, skip = false, 
 
 export default function Home() {
   const [lang, setLang] = useState("vi");
-  // 0: Profile, 1: Boot, 2: Workspace P1, 3: Master Board, 4: Terminal P1, 5: Game Over P1
+  // -3: Click/Enter to Start, -2: Cinematic Trailer, -1: Secure Boot
+  // 0: Profile, 1: Boot, 2: Workspace P1, 3: Terminal Logic Code P1, 4: Terminal Keyword P1, 5: Game Over P1
   // 6: Victory P1, 7: Workspace P2, 8: Terminal P2, 9: Victory P2, 13: Game Over P2
   // 10: Workspace P3, 11: Terminal P3 (Matrix Lock), 12: Ultimate Ending, 14: Game Over P3
   // 15: Shutdown System
-  const [step, setStep] = useState(0); 
+  const [step, setStep] = useState(-3); 
   const [selectedEvidence, setSelectedEvidence] = useState(null);
   
   // UX State
-  const [skipTyping, setSkipTyping] = useState(false); // Cơ chế Click-to-Skip
+  const [skipTyping, setSkipTyping] = useState(false);
 
   // Audio State
   const [bgm, setBgm] = useState(null);
   const [isMuted, setIsMuted] = useState(true);
 
   // Gameplay State P1
-  const [selectedRows, setSelectedRows] = useState([]);
-  const [strikesP1, setStrikesP1] = useState(3);
-  const [errorMsgP1, setErrorMsgP1] = useState("");
+  const [logicAnswer, setLogicAnswer] = useState("");
+  const [logicError, setLogicError] = useState("");
   const [finalAnswer, setFinalAnswer] = useState("");
+  const [strikesP1, setStrikesP1] = useState(3);
 
   // Gameplay State P2
   const [cipherAnswer, setCipherAnswer] = useState("");
@@ -81,14 +82,38 @@ export default function Home() {
   const [matrixAnswer, setMatrixAnswer] = useState("");
   const [matrixError, setMatrixError] = useState("");
   const [strikesP3, setStrikesP3] = useState(3);
-  const [timeLeft, setTimeLeft] = useState(300); // 5 phút = 300 giây
+  const [timeLeft, setTimeLeft] = useState(300);
+
+  // --- LOGIC PHÍM ESC ĐỂ ĐÓNG TÀI LIỆU ---
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape' && selectedEvidence) {
+        setSelectedEvidence(null);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [selectedEvidence]);
+
+  // Lắng nghe phím ENTER ở màn hình chờ đầu tiên (Step -3)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (step === -3 && e.key === 'Enter') {
+        setIsMuted(false);
+        if (bgm) bgm.play();
+        setStep(-2);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [step, bgm]);
 
   // Reset tính năng Skip mỗi khi chuyển màn hình
   useEffect(() => {
     setSkipTyping(false);
   }, [step, selectedEvidence]);
 
-  // --- LOGIC ÂM THANH (SSR SAFE) ---
+  // --- LOGIC ÂM THANH ---
   useEffect(() => {
     const audio = new Audio("/bgm.mp3");
     audio.loop = true;
@@ -103,7 +128,7 @@ export default function Home() {
     if (bgm) {
       if (!isMuted) {
         bgm.play().catch(e => {
-          console.log("Trình duyệt chặn Autoplay âm thanh:", e);
+          console.log("Autoplay blocked:", e);
           setIsMuted(true);
         });
       } else {
@@ -120,7 +145,7 @@ export default function Home() {
         setTimeLeft((prev) => prev - 1);
       }, 1000);
     } else if (step === 11 && timeLeft <= 0) {
-      setStep(14); // Bom nổ -> Game Over P3
+      setStep(14);
     }
     return () => clearInterval(timer);
   }, [step, timeLeft]);
@@ -134,6 +159,22 @@ export default function Home() {
   const content = {
     vi: {
       langBtn: "LANG: [VI]",
+      
+      cinematicLines: [
+        "Washington, 2003.\nMột thế giới nơi những bí mật không bao giờ thực sự biến mất.\nNhững vụ án chưa có lời giải. Những con người biến mất không để lại dấu vết.\nVà những kẻ đứng sau bóng tối... chưa từng để lộ khuôn mặt thật.",
+        "Nhiều năm sau khi một chuỗi án mạng bí ẩn khép lại,\nmột hồ sơ cũ bất ngờ được mở lại.\nKhông phải bởi cảnh sát. Không phải bởi truyền thông.\nMà bởi một tín hiệu được gửi đến từ một hệ thống đã bị xóa khỏi mọi cơ sở dữ liệu.",
+        "Mã hồ sơ:\n2215\n\nMột cái tên xuất hiện trong đó.\nZODIAC.",
+        "Nhưng lần này... hắn không để lại một bức thư.\nHắn để lại một trò chơi.",
+        "Và chỉ có một cách để tìm ra sự thật:\nGIẢI NÓ."
+      ],
+      bootTermLines: [
+        "[ SECURE BOOT v5.0 ]",
+        "INITIALIZING...",
+        "IDENTITY VERIFICATION",
+        "████████████████████ 100%",
+        "WELCOME, AGENT AKAI."
+      ],
+
       profTitle: "[ HỒ SƠ NHÂN SỰ LƯU TRỮ - FBI ]",
       profLine1: "Định danh: AKAI (Mã: FBI-A042)",
       profLine2: "Chức vụ: Đặc vụ Cấp cao - Đội Điều Tra Trọng Án",
@@ -170,29 +211,24 @@ export default function Home() {
       cards: [
         { id: 1, title: "[BÁO CÁO PHÁP Y]", tag: "T.O.D: 21:45 - 22:15", desc: "Xác định nguyên nhân: Ngộ độc khí CO. Thời gian tử vong (T.O.D) ước tính từ 21:45 đến 22:15 đêm qua dựa trên độ đông cứng tử thi.", detail: "BÁO CÁO PHÁP Y CHI TIẾT (#FB-9921):\n- Nồng độ CO trong máu nạn nhân > 70%.\n- Phát hiện nhiệt độ bất thường tại hiện trường: Hệ thống Smarthome đã bị can thiệp hạ nhiệt độ xuống 0°C ngay sau khi tử vong, khiến quá trình đông cứng thi thể diễn ra nhanh hơn bình thường, lừa bác sĩ pháp y phán đoán sai lệch giờ chết lùi lại 2 tiếng so với thời điểm thực tế (00:00 đêm)." },
         { id: 2, title: "[LỜI KHAI NGHI PHẠM]", tag: "SUBJECT: SARAH", desc: "Sarah (con gái vợ nạn nhân) khai: Rời biệt thự lúc 21:00 bằng xe Porsche (Dung tích xăng tối đa 45 Lít) chạy về trung tâm thành phố.", detail: "BIÊN BẢN LẤY LỜI KHAI (SUBJECT: SARAH VANCE):\n- Sarah khẳng định cô ăn tối cùng gia đình và rời đi lúc 21:00.\n- Cô hoàn toàn không hay biết việc xe của mình bị đánh cắp biển số giả hoặc thẻ tín dụng bị lợi dụng quẹt giao dịch lúc 22:12 tại trạm xăng ngoại ô." },
-        { id: 3, title: "[CAMERA GIAO THÔNG]", tag: "RED HERRING", desc: "Xe Porsche qua trạm thu phí lúc 21:30. Đồng hồ camera bị lỗi, chạy nhanh hơn thực tế 5 phút (Tức xe qua trạm lúc 21:25).", detail: "DỮ LIỆU KỸ THUẬT CAMERA SỐ 4:\n- Khung hình ghi nhận chiếc Porsche chạy qua lúc 21:30.\n- Kiểm tra máy chủ cho thấy đồng hồ camera bị hack chạy nhanh hơn thực tế 5 phút. Khoảng cách di chuyển từ biệt thự đến trạm thu phí chỉ mất 15 phút, nghĩa là có một khoảng trống 10 phút từ 21:00 đến 21:10 mà chiếc xe đã dừng lại bí ẩn." },
+        { id: 3, title: "[CAMERA GIAO THÔNG]", tag: "RED HERRING", desc: "Xe Porsche qua trạm thu phí lúc 21:30. Đồng hồ camera bị lỗi, chạy nhanh hơn thực tế 5 phút (Tức xe qua trạm lúc 21:25).", detail: "DỮ LIỆU KỸ THUẬT CAMERA SỐ 4:\n- Khung hình ghi nhận chiếc Porsche chạy qua lúc 21:30.\n- Kiểm tra máy chủ cho thấy đồng hồ camera bị hack chạy nhanh hơn thực tế 5 phút. Khoảng cách di chuyển từ biệt thự đến trạm thu phí chỉ mất 15 phút, nghĩa là có một khoảng trống bí ẩn khi chiếc xe dừng lại." },
         { id: 4, title: "[HÓA ĐƠN SIÊU THỊ]", tag: "TIME: 22:10", desc: "Giao dịch thành công lúc 22:10. Thẻ tín dụng định danh của Sarah thanh toán đồ dùng sinh hoạt tại trung tâm thành phố.", detail: "SAO KÊ NGÂN HÀNG & HÓA ĐƠN ĐIỆN TỬ:\n- Mã giao dịch: TXN-8821\n- Thời gian: 22:10 tại Siêu thị Trung tâm.\n- Món hàng: Đồ gia dụng nhỏ lẻ. Đây là nước đi hoàn hảo của Zodiac nhằm tạo ngoại phạm giả mạo cho chủ thẻ." },
-        { id: 5, title: "[BIÊN LAI TRẠM XĂNG]", tag: "STATUS: ANOMALY", desc: "Hệ thống tự động tại trạm xăng ghi nhận thẻ của Sarah thanh toán cho đúng 50 LÍT XĂNG lúc 22:12.", detail: "DỮ LIỆU TRỤ BƠM XĂNG SỐ 7:\n- Thời gian: 22:12.\n- Lượng nhiên liệu bơm: 50 Lít.\n- ĐIỂM VÔ LÝ PHÁT HIỆN: Sổ đăng kiểm xe Porsche của Sarah cho thấy dung tích bình chứa tối đa tuyệt đối chỉ là 45 Lít. 5 Lít chênh lệch chính là tang vật dùng cho máy phát điện CO tại biệt thự." }
+        { id: 5, title: "[BIÊN LAI TRẠM XĂNG]", tag: "STATUS: ANOMALY", desc: "Hệ thống tự động tại trạm xăng ghi nhận thẻ của Sarah thanh toán cho đúng 50 LÍT XĂNG lúc 22:12.", detail: "DỮ LIỆU TRỤ BƠM XĂNG SỐ 7:\n- Thời gian: 22:12.\n- Lượng nhiên liệu bơm: 50 Lít.\n- ĐIỂM VÔ LÝ PHÁT HIỆN: Sổ đăng kiểm xe Porsche của Sarah cho thấy dung tích bình chứa tối đa tuyệt đối chỉ là 45 Lít. Sự chênh lệch này chính là tang vật dùng cho máy phát điện CO tại biệt thự." }
       ],
       
-      openBoardBtn: "[ MỞ BẢNG ĐỐI CHIẾU DỮ LIỆU TỔNG HỢP ]",
-      boardTitle: ">> BẢNG ĐỐI CHIẾU DỮ LIỆU (MASTER BOARD) <<",
-      boardDesc: "HỆ THỐNG YÊU CẦU: Khớp lệnh dữ liệu. Hãy chọn chính xác 3 ĐIỂM NGHI VẤN tạo thành 'Tam Giác Logic' (Thời gian - Vật chứng - Dung lượng) để bẻ gãy bằng chứng ngoại phạm hoàn hảo này.",
-      boardHeaders: ["THỜI GIAN", "NGUỒN", "DỮ KIỆN TRÍCH XUẤT", "ĐIỂM NGHI VẤN (CẦN XÁC MINH)", "CHỌN"],
-      boardRows: [
-        { id: 1, time: "21:00", source: "Lời khai", data: "Sarah rời biệt thự bằng xe Porsche (Max 45L).", anomaly: "Lái xe hướng về trung tâm thành phố (cách hiện trường 40km)." },
-        { id: 2, time: "21:25", source: "Camera", data: "Xe Porsche qua trạm thu phí (Đã trừ 5p lỗi).", anomaly: "Khoảng cách đến trạm chỉ mất 15p (Đáng lẽ đến lúc 21:15). Có 10 PHÚT TRỐNG chiếc xe đã ở đâu?" },
-        { id: 3, time: "21:45", source: "Pháp y", data: "Khoảng thời gian nạn nhân ngộ độc khí CO.", anomaly: "Máy phát điện CO (dung tích 5 LÍT) tìm thấy trong tình trạng cạn sạch nhiên liệu." },
-        { id: 4, time: "22:10", source: "Hóa đơn", data: "Thẻ của Sarah quẹt tại siêu thị trung tâm.", anomaly: "Giao dịch mua sắm nhu yếu phẩm bình thường." },
-        { id: 5, time: "22:12", source: "Trạm xăng", data: "Thẻ của Sarah thanh toán lượng nhiên liệu.", anomaly: "Thanh toán 50 LÍT XĂNG, nhưng xe Porsche chỉ chứa tối đa 45 Lít." }
-      ],
-      analyzeBoardBtn: "[ TIẾN HÀNH BẺ GÃY NGOẠI PHẠM ]",
+      openBoardBtn: "[ TRUY CẬP HỆ THỐNG TRUY VẤN ]",
+      p1BoardTitle: ">> HỆ THỐNG TRUY VẤN CHUỖI LOGIC <<",
+      p1BoardDesc: "Hãy trích xuất các con số từ hồ sơ vụ án để tạo thành Mã Chốt Án (Logic Code) gồm 3 phần:\n\n1. Khoảng thời gian trống (phút) chiếc xe Porsche bị giấu đi?\n2. Dung tích thực tế (Lít) của máy phát điện tang vật?\n3. Độ chênh lệch nhiên liệu (Lít) phát hiện tại trạm xăng?\n\nĐịnh dạng nhập: X-Y-Z (Ví dụ: 15-10-5)",
+      p1BoardPlaceholder: "Nhập mã chuỗi logic...",
+      p1BoardSubmit: "[ PHÁ VỠ NGOẠI PHẠM ]",
+
       gameOverTitle: "HỆ THỐNG ĐÃ KHÓA",
       gameOverDesc: "LẬP LUẬN THẤT BẠI. HỆ THỐNG BẢO MẬT ĐÃ TỰ HỦY.",
       rebootBtn: "[ TẢI LẠI HỆ THỐNG ]",
-      conclusionTitle: ">> BƯỚC CUỐI: TRUY VẤN DANH TÍNH <<",
-      conclusionText: "Mâu thuẫn Tam Giác Logic đã được giải:\n1. Có 10 phút trống để thủ phạm giấu máy phát điện tại biệt thự.\n2. Máy phát điện cần đúng 5 Lít xăng để chạy.\n3. Biên lai dư ra 5 Lít xăng (50L đổ vào xe 45L).\n\nNHƯNG Sarah mù công nghệ, cô ta không thể hack Smarthome xóa camera hay chỉnh nhiệt độ phòng. Vậy kẻ am hiểu IT đã đánh cắp thẻ của Sarah, lái xe của cô ta đi quẹt thẻ lúc 22:12 nhằm tạo chứng cứ giả là ai?",
-      placeholder: "Nhập từ khóa (Liên quan đến hung thủ...)",
+
+      conclusionTitle: ">> BƯỚC CUỐI: LẬT TẨY PHƯƠNG THỨC <<",
+      conclusionText: "Mã chuỗi 10-5-5 hoàn toàn khớp lệnh! Mâu thuẫn Tam Giác Logic đã được giải:\nHắn dừng xe 10 phút để đánh tráo, và dùng 5 Lít xăng dư bơm vào can nhựa cho máy phát điện.\n\nNHƯNG Sarah mù công nghệ. Hãy trả lời câu hỏi cuối cùng: Cỗ máy nào, hay đúng hơn là hệ thống nào tại biệt thự, đã bị hacker thâm nhập để hạ nhiệt độ phòng xuống 0°C nhằm thay đổi thời gian tử vong?",
+      placeholder: "Nhập tên hệ thống...",
       submitBtn: "[ CHỐT ÁN ]",
       
       victoryTitle: "MẬT MÃ ĐÃ ĐƯỢC GIẢI",
@@ -216,11 +252,11 @@ export default function Home() {
       ],
       p2OpenTerminal: "[ TRUY CẬP BÀN GIẢI MÃ KÝ TỰ (CIPHER TERMINAL) ]",
       p2TerminalTitle: ">> BÀN GIẢI MÃ KÝ TỰ (CAESAR CIPHER) <<",
-      p2TerminalDesc: "Zodiac thách thức bộ óc toán học của Akai. Hãy tra cứu Bảng chữ cái A-Z bên dưới và lùi lại 3 bước (Gợi ý: Khóa Key = Số nạn nhân ở Phần 1) để dịch mã bức thư máu:\n\nDãy mã hóa: W K L V - L V - M X V W - W K H - E H J L Q Q L Q J",
+      p2TerminalDesc: "Mật mã Caesar luôn cần một con số để dịch chuyển. Zodiac là kẻ kiêu ngạo, hắn luôn nhắc nhở về những tác phẩm của mình. Hãy tìm **số lượng sinh mạng** đã bị tước đoạt trong đêm lạnh giá tại biệt thự Vance (Vụ án Phần 1) để làm Khóa Key lùi lại.\n\nDãy mã hóa: W K L V - L V - M X V W - W K H - E H J L Q Q L Q J",
       p2Placeholder: "Nhập thông điệp sau khi giải mã (Tiếng Anh, không dấu)...",
       p2Submit: "[ GIẢI MÃ & TRUY TÌM TỌA ĐỘ ]",
       p2VictoryTitle: "TỌA ĐỘ ĐÃ ĐƯỢC XÁC ĐỊNH",
-      p2VictoryDesc: "Xuất sắc, Đặc vụ Akai!\nBằng cách đối chiếu bảng chữ cái và lùi mỗi chữ cái lại đúng 3 bước (Khóa Key = 3 nạn nhân ở Phần 1):\n- W lùi 3 -> T, K lùi 3 -> H, L lùi 3 -> I, V lùi 3 -> S ...\nĐoạn mã đã chuyển hóa hoàn hảo thành:\n\n'THIS IS JUST THE BEGINNING'\n\n(Đây chỉ là điểm bắt đầu).\n\nHệ thống định vị radar phát hiện tín hiệu từ chiếc USB ẩn đã kết nối vào trạm xử lý nước thải bỏ hoang Sector 7. Zodiac đang đợi bạn ở đó cho trận chiến cuối cùng !",
+      p2VictoryDesc: "Xuất sắc, Đặc vụ Akai!\nKhóa Key chính là số 3 (Tương ứng 3 nạn nhân nhà Vance). Bằng cách lùi mỗi chữ cái lại đúng 3 bước (W lùi 3 -> T, K lùi 3 -> H...), đoạn mã đã chuyển hóa hoàn hảo thành:\n\n'THIS IS JUST THE BEGINNING'\n\n(Đây chỉ là điểm bắt đầu).\n\nHệ thống định vị radar phát hiện tín hiệu từ chiếc USB ẩn đã kết nối vào trạm xử lý nước thải bỏ hoang Sector 7. Zodiac đang đợi bạn ở đó cho trận chiến cuối cùng !",
       p2FinalBtn: "[ SẴN SÀNG KHỞI ĐỘNG PHẦN 3: CUỘC ĐỐI ĐẦU TRỰC DIỆN ]",
 
       // --- PHẦN 3 (FINAL SHOWDOWN) ---
@@ -270,6 +306,22 @@ export default function Home() {
     },
     en: {
       langBtn: "LANG: [EN]",
+
+      cinematicLines: [
+        "Washington, 2003.\nA world where secrets never truly disappear.\nUnsolved cases. People vanishing without a trace.\nAnd those hiding in the shadows... never revealing their true faces.",
+        "Years after a series of mysterious murders was closed,\nan old case file is suddenly reopened.\nNot by the police. Not by the media.\nBut by a signal sent from a system wiped from all databases.",
+        "File code:\n2215\n\nA name appears within it.\nZODIAC.",
+        "But this time... he didn't leave a letter.\nHe left a game.",
+        "And there is only one way to find the truth:\nSOLVE IT."
+      ],
+      bootTermLines: [
+        "[ SECURE BOOT v5.0 ]",
+        "INITIALIZING...",
+        "IDENTITY VERIFICATION",
+        "████████████████████ 100%",
+        "WELCOME, AGENT AKAI."
+      ],
+
       profTitle: "[ ARCHIVED PERSONNEL FILE - FBI ]",
       profLine1: "Designation: AKAI (ID: FBI-A042)",
       profLine2: "Role: Senior Agent - Major Crimes Division",
@@ -306,29 +358,24 @@ export default function Home() {
       cards: [
         { id: 1, title: "[FORENSICS REPORT]", tag: "T.O.D: 21:45 - 22:15", desc: "Cause of death: CO poisoning. T.O.D estimated from 21:45 to 22:15 last night based on rigor mortis.", detail: "DETAILED FORENSIC REPORT (#FB-9921):\n- Blood CO concentration > 70%.\n- Room temperature anomaly detected at the scene: The Smarthome system was tampered with to drop the temperature to 0°C immediately after death, causing the rigor mortis process to occur much faster than normal, deceiving the forensic doctor into estimating the time of death 2 hours earlier than the actual time (00:00 midnight)." },
         { id: 2, title: "[SUSPECT STATEMENT]", tag: "SUBJECT: SARAH", desc: "Sarah (victim's stepdaughter) stated: Left the mansion at 21:00 driving a Porsche (Max tank 45 Liters) heading downtown.", detail: "INTERROGATION TRANSCRIPT (SUBJECT: SARAH VANCE):\n- Sarah firmly asserts she had dinner with her family and left at 21:00.\n- She is completely unaware of her car license plates being cloned or her credit card being illicitly used for a transaction at 22:12 at a suburban gas station." },
-        { id: 3, title: "[TRAFFIC CAMERA]", tag: "RED HERRING", desc: "Porsche passed toll booth at 21:30. Camera clock is bugged, running 5 mins faster than real time (Meaning it passed at 21:25).", detail: "CAMERA DATA TECHNICAL REPORT (#4):\n- The frame recorded the Porsche speeding past at 21:30.\n- Server inspection shows the camera clock was hacked to run 5 minutes faster than real-time. The travel distance from the mansion to the toll booth only takes 15 minutes, meaning there is a mysterious 10-minute missing window from 21:00 to 21:10 where the car stopped." },
+        { id: 3, title: "[TRAFFIC CAMERA]", tag: "RED HERRING", desc: "Porsche passed toll booth at 21:30. Camera clock is bugged, running 5 mins faster than real time (Meaning it passed at 21:25).", detail: "CAMERA DATA TECHNICAL REPORT (#4):\n- The frame recorded the Porsche speeding past at 21:30.\n- Server inspection shows the camera clock was hacked to run 5 minutes faster than real-time. The travel distance from the mansion to the toll booth only takes 15 minutes, meaning there is a mysterious missing window when the car stopped." },
         { id: 4, title: "[SUPERMARKET RECEIPT]", tag: "TIME: 22:10", desc: "Successful transaction at 22:10. Sarah's registered credit card paid for groceries downtown.", detail: "BANK STATEMENT & E-RECEIPT:\n- Transaction ID: TXN-8821\n- Time: 22:10 at the Central Supermarket.\n- Items: Small household goods. This is a perfect move by Zodiac to create a forged alibi for the cardholder." },
-        { id: 5, title: "[GAS STATION RECEIPT]", tag: "STATUS: ANOMALY", desc: "Automated system recorded Sarah's card successfully paying for exactly 50 LITERS OF GAS at 22:12.", detail: "GAS PUMP #7 DATA:\n- Time: 22:12.\n- Fuel pumped: 50 Liters.\n- DISCOVERED ANOMALY: Sarah's Porsche registration shows the absolute maximum tank capacity is strictly 45 Liters. The 5-Liter discrepancy is exactly the evidence used for the CO generator at the mansion." }
+        { id: 5, title: "[GAS STATION RECEIPT]", tag: "STATUS: ANOMALY", desc: "Automated system recorded Sarah's card successfully paying for exactly 50 LITERS OF GAS at 22:12.", detail: "GAS PUMP #7 DATA:\n- Time: 22:12.\n- Fuel pumped: 50 Liters.\n- DISCOVERED ANOMALY: Sarah's Porsche registration shows the absolute maximum tank capacity is strictly 45 Liters. The fuel discrepancy is exactly the evidence used for the CO generator at the mansion." }
       ],
       
-      openBoardBtn: "[ OPEN MASTER DATA BOARD ]",
-      boardTitle: ">> MASTER DATA BOARD <<",
-      boardDesc: "SYSTEM OVERRIDE: Data matching required. Select exactly 3 SUSPICIOUS POINTS to form a 'Logic Triangle' (Time - Evidence - Volume) to break this perfect alibi.",
-      boardHeaders: ["TIME", "SOURCE", "EXTRACTED DATA", "SUSPICIOUS POINT (VERIFY)", "SELECT"],
-      boardRows: [
-        { id: 1, time: "21:00", source: "Statement", data: "Sarah left driving Porsche (Max 45L).", anomaly: "Driving towards downtown (40km away)." },
-        { id: 2, time: "21:25", source: "Camera", data: "Porsche passed toll (Minus 5m bug).", anomaly: "Distance takes 15m. Where was the car for the 10 MISSING MINUTES?" },
-        { id: 3, time: "21:45", source: "Forensics", data: "Time frame of CO poisoning.", anomaly: "The CO generator (5L capacity) was completely empty." },
-        { id: 4, time: "22:10", source: "Receipt", data: "Sarah's card swiped at supermarket.", anomaly: "Normal grocery transaction." },
-        { id: 5, time: "22:12", source: "Gas Station", data: "Sarah's card paid for fuel.", anomaly: "Paid for 50 LITERS, but Porsche only holds 45L max." }
-      ],
-      analyzeBoardBtn: "[ EXECUTE ALIBI BREACH ]",
+      openBoardBtn: "[ ACCESS QUERY SYSTEM ]",
+      p1BoardTitle: ">> LOGIC SEQUENCE QUERY SYSTEM <<",
+      p1BoardDesc: "Extract numbers from the case files to form the 3-part Logic Code:\n\n1. The missing time window (minutes) the Porsche was hidden?\n2. The actual capacity (Liters) of the asphyxiation evidence?\n3. The fuel discrepancy (Liters) discovered at the gas station?\n\nInput format: X-Y-Z (Example: 15-10-5)",
+      p1BoardPlaceholder: "Enter logic sequence code...",
+      p1BoardSubmit: "[ BREACH ALIBI ]",
+
       gameOverTitle: "SYSTEM LOCKED",
       gameOverDesc: "DEDUCTION FAILED. SECURITY SYSTEM SELF-DESTRUCTED.",
       rebootBtn: "[ REBOOT SYSTEM ]",
-      conclusionTitle: ">> FINAL STEP: IDENTITY QUERY <<",
-      conclusionText: "Logic Triangle Solved:\n1. 10 missing minutes to set up the generator.\n2. The generator needs exactly 5L to run.\n3. The receipt shows an extra 5L (50L in a 45L car).\n\nBUT Sarah is tech-illiterate, she cannot hack a Smarthome to wipe cameras or alter room temperatures. Who is the IT expert that stole her card and drove her car to swipe it at 22:12 to frame her?",
-      placeholder: "Enter keyword (e.g., Zodiac, Hacker, Accomplice...)",
+
+      conclusionTitle: ">> FINAL STEP: EXPOSING THE METHOD <<",
+      conclusionText: "Sequence 10-5-5 matches perfectly! The Logic Triangle is solved:\nHe stopped the car for 10 minutes to set it up, and used the extra 5 Liters of gas for the generator.\n\nBUT Sarah is tech-illiterate. Answer the final question: What specific machine, or rather, what system at the mansion was hacked to drop the room temperature to 0°C to alter the time of death?",
+      placeholder: "Enter system name...",
       submitBtn: "[ CONCLUDE CASE ]",
       
       victoryTitle: "CIPHER SOLVED",
@@ -347,16 +394,16 @@ export default function Home() {
       p2Cards: [
         { id: 101, title: "[FORENSICS REPORT P.2]", tag: "CAUSE: KCL", desc: "Confirmed Sarah died from Potassium Chloride (KCl) injection directly into the vein, causing acute cardiac arrest.", detail: "SARAH'S AUTOPSY REPORT (#AUT-881):\n- Cause of death: High-dose Potassium Chloride (KCl) poisoning via intravenous route.\n- Biological traces: A faint needle mark on the left wrist. Notably, no fingerprints of Sarah were found on the syringe or surrounding items. She was injected with the lethal drug in a state of surprise or previously drugged." },
         { id: 102, title: "[SCENE TRACES]", tag: "EVIDENCE: MUD", desc: "Mud traces on shoes matching specific mud from the northern industrial swamps. No fingerprints of Sarah.", detail: "FORENSIC CRIMINAL & TRACE ANALYSIS:\n- The thin layer of mud on the living room rug contains specific minerals from the northern industrial wetlands (25km away from the center).\n- No signs of forced entry on the main door or windows. The killer possessed a smart access card or internal passcode of the apartment, demonstrating absolute control over technology." },
-        { id: 103, title: "[BLOODY NOTE]", tag: "BLOODY_NOTE.PNG", desc: "Zodiac's bloody letter sent specifically to Akai contains a strange cipher sequence: \nW K L V - L V - M X V W - W K H - E H J L Q Q L Q J", detail: "DOCUMENT & CRYPTANALYSIS EXPERTISE:\n- The note was torn from an old notebook, soaked in the victim's own blood.\n- The fully capitalized string follows the classic Caesar Cipher system:\n  W K L V - L V - M X V W - W K H - E H J L Q Q L Q J\n- The shift key (Key) was implicitly hinted at by Zodiac through the number of victims in the major case of Part 1 (Key = 3)." },
+        { id: 103, title: "[BLOODY NOTE]", tag: "BLOODY_NOTE.PNG", desc: "Zodiac's bloody letter sent specifically to Akai contains a strange cipher sequence: \nW K L V - L V - M X V W - W K H - E H J L Q Q L Q J", detail: "DOCUMENT & CRYPTANALYSIS EXPERTISE:\n- The note was torn from an old notebook, soaked in the victim's own blood.\n- The fully capitalized string follows the classic Caesar Cipher system:\n  W K L V - L V - M X V W - W K H - E H J L Q Q L Q J" },
         { id: 104, title: "[USB UPSTAIRS]", tag: "HIDDEN_SYMBOL.PNG", desc: "A USB neatly placed on the upstairs study desk, recording a blurry video of Zodiac's silhouette leaving the apartment.", detail: "MINI CAMERA & USB DATA EXTRACTION:\n- The USB was neatly placed on the desk in the upstairs study room of the apartment.\n- The video file recorded at 03:15 AM: A tall silhouette wearing a dark hoodie, donning a mask hidden in the shadows, leisurely walks out the front door holding a classified file of the Vance family." }
       ],
       p2OpenTerminal: "[ OPEN CAESAR CIPHER TERMINAL ]",
       p2TerminalTitle: ">> CAESAR CIPHER DECODER <<",
-      p2TerminalDesc: "Zodiac challenges Akai's mathematical mind. Consult the A-Z Alphabet table below and shift back 3 steps (Hint: Key = Number of Part 1 victims) to decode the bloody letter:\n\nCipher sequence: W K L V - L V - M X V W - W K H - E H J L Q Q L Q J",
+      p2TerminalDesc: "The Caesar cipher always requires a shift number. Zodiac is arrogant, always reminding us of his masterpieces. Find the **number of lives** taken during that cold night at the Vance mansion (Part 1 Case) to use as the backward shift Key.\n\nCipher sequence: W K L V - L V - M X V W - W K H - E H J L Q Q L Q J",
       p2Placeholder: "Enter decrypted message (English, no accents)...",
       p2Submit: "[ DECRYPT & LOCATE COORDINATES ]",
       p2VictoryTitle: "COORDINATES SECURED",
-      p2VictoryDesc: "Brilliant, Agent Akai!\nBy referencing the alphabet table and shifting each letter back exactly 3 steps (Key = 3 victims in Part 1):\n- W back 3 -> T, K back 3 -> H, L back 3 -> I, V back 3 -> S ...\nThe code perfectly transformed into:\n\n'THIS IS JUST THE BEGINNING'\n\nRadar positioning system detected a signal from the hidden USB connecting to the abandoned Sector 7 water treatment plant. Zodiac is waiting for you there for the final battle!",
+      p2VictoryDesc: "Brilliant, Agent Akai!\nThe Shift Key is 3 (Corresponding to the 3 Vance victims). By referencing the alphabet table and shifting each letter back exactly 3 steps (W back 3 -> T, K back 3 -> H...), the code perfectly transformed into:\n\n'THIS IS JUST THE BEGINNING'\n\nRadar positioning system detected a signal from the hidden USB connecting to the abandoned Sector 7 water treatment plant. Zodiac is waiting for you there for the final battle!",
       p2FinalBtn: "[ READY TO INITIATE PART 3: FINAL SHOWDOWN ]",
 
       // --- P3 ---
@@ -409,56 +456,53 @@ export default function Home() {
   const t = content[lang];
 
   const getBackgroundClass = () => {
+    if (step <= -1) return "bg-black";
     if (step === 12) return "bg-[url('/end3.png')]";
     if (step === 9) return "bg-[url('/end2.png')]";
     if (step >= 10 && step <= 14) return "bg-[url('/sector7_plant.png')]";
     if (step >= 7 && step <= 13) return "bg-[url('/apartment_scene.png')]";
-    return (step >= 2 && step <= 4) ? "bg-[url('/scene.png')]": "bg-[url('/fbi.png')]";
+    return (step >= 2 && step <= 6) ? "bg-[url('/scene.png')]": "bg-[url('/fbi.png')]";
   };
 
-  const handleToggleRow = (id) => {
-    if (selectedRows.includes(id)) {
-      setSelectedRows(selectedRows.filter(rowId => rowId !== id));
-    } else {
-      if (selectedRows.length < 3) setSelectedRows([...selectedRows, id]);
-    }
-  };
-
-  const handleAnalyzeBoard = () => {
-    if (selectedRows.includes(2) && selectedRows.includes(3) && selectedRows.includes(5)) {
+  // P1 Logic: Mã Chuỗi Dữ Kiện "10-5-5"
+  const handleLogicCodeSubmit = (e) => {
+    e.preventDefault();
+    const cleanAns = logicAnswer.replace(/\s+/g, "");
+    if (cleanAns === "10-5-5") {
       setStep(4);
-      setErrorMsgP1("");
+      setLogicError("");
     } else {
       setStrikesP1(s => s - 1);
-      setSelectedRows([]);
       if (strikesP1 <= 1) {
         setStep(5);
       } else {
         const err = lang === "vi" 
-          ? `Tam giác logic bị sai. Còn ${strikesP1 - 1} mạng.`
-          : `Logic Triangle failed. ${strikesP1 - 1} strikes left.`;
-        setErrorMsgP1(err);
-        setTimeout(() => setErrorMsgP1(""), 5000);
+          ? `Mã chuỗi logic bị sai. Còn ${strikesP1 - 1} mạng.`
+          : `Logic code failed. ${strikesP1 - 1} strikes left.`;
+        setLogicError(err);
+        setTimeout(() => setLogicError(""), 5000);
       }
     }
   };
 
+  // P1 Logic: Cỗ máy bị hack "smarthome"
   const handleSubmitAnswer = (e) => {
     e.preventDefault();
-    const ans = finalAnswer.toLowerCase();
-    if (ans.includes("zodiac") || ans.includes("hacker") || ans.includes("kẻ thứ ba") || ans.includes("đồng phạm") || ans.includes("accomplice") || ans.includes("tòng phạm")) {
+    const ans = finalAnswer.toLowerCase().replace(/\s+/g, "");
+    if (ans.includes("smarthome") || ans.includes("smart home")) {
       setStep(6);
     } else {
       setStrikesP1(s => s - 1);
       if (strikesP1 <= 1) {
         setStep(5);
       } else {
-        setErrorMsgP1(lang === "vi" ? `Từ khóa sai! Còn ${strikesP1 - 1} mạng.` : `Wrong keyword! ${strikesP1 - 1} strikes left.`);
-        setTimeout(() => setErrorMsgP1(""), 5000);
+        setLogicError(lang === "vi" ? `Câu trả lời sai! Còn ${strikesP1 - 1} mạng.` : `Wrong answer! ${strikesP1 - 1} strikes left.`);
+        setTimeout(() => setLogicError(""), 5000);
       }
     }
   };
 
+  // P2 Logic: Giải Caesar Cipher "this is just the beginning"
   const handleCipherSubmit = (e) => {
     e.preventDefault();
     const cleanAns = cipherAnswer.toLowerCase().trim();
@@ -501,7 +545,7 @@ export default function Home() {
   const TopStatusBar = () => (
     <div className="flex justify-between items-center w-full mb-8 pb-4 border-b border-zinc-800 relative z-50">
       <div className="flex items-center gap-4">
-        <span className="text-xs font-mono text-amber-500 tracking-widest animate-pulse">[SECURE_BOOT_v5.0_MASTERPIECE]</span>
+        <span className="text-xs font-mono text-amber-500 tracking-widest animate-pulse">[SECURE_BOOT_v5.1_MASTERPIECE]</span>
         <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }} className="text-xs font-mono text-zinc-500 hover:text-cyan-400 transition-all cursor-pointer border border-zinc-700 px-2 py-0.5 rounded">
           {lang === "vi" ? `[ ÂM THANH: ${isMuted ? "TẮT" : "BẬT"} ]` : `[ SOUND: ${isMuted ? "OFF" : "ON"} ]`}
         </button>
@@ -523,6 +567,77 @@ export default function Home() {
   );
 
   // ==========================================
+  // BƯỚC -3: CLICK TO START (Enable Audio)
+  // ==========================================
+  if (step === -3) {
+    return (
+      <main 
+        onClick={() => { setIsMuted(false); if(bgm) bgm.play(); setStep(-2); }} 
+        className="h-screen w-full bg-black flex items-center justify-center cursor-pointer scanlines"
+      >
+         <div className="text-zinc-500 font-mono tracking-widest animate-pulse text-sm text-center px-4">
+            {lang === "vi" ? "[ NHẤN ENTER HOẶC CLICK ĐỂ BẮT ĐẦU ]" : "[ PRESS ENTER OR CLICK TO START ]"}
+         </div>
+      </main>
+    );
+  }
+
+  // ==========================================
+  // BƯỚC -2: CINEMATIC TRAILER INTRO
+  // ==========================================
+  if (step === -2) {
+    return (
+      <main onClick={() => setSkipTyping(true)} className="min-h-screen w-full flex flex-col items-center justify-center bg-black text-slate-300 font-mono p-4 md:p-12 relative overflow-y-auto py-20">
+        <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-30"></div>
+        
+        {/* NÚT NGÔN NGỮ Ở TRAILER */}
+        <div className="absolute top-4 right-4 md:top-8 md:right-8 z-50">
+           <button onClick={(e) => { e.stopPropagation(); setLang(lang === "vi" ? "en" : "vi"); }} className="px-3 py-1.5 border border-zinc-600 bg-zinc-900 hover:border-cyan-400 hover:text-cyan-400 transition-all cursor-pointer rounded text-xs font-mono">
+             <TypewriterText text={t.langBtn} speed={30} skip={skipTyping} noCursor/>
+           </button>
+        </div>
+
+        <div className="max-w-4xl text-center space-y-8 md:space-y-12 z-10 relative mt-10">
+           {t.cinematicLines.map((text, idx) => (
+              <div key={idx} className="text-sm md:text-lg lg:text-xl tracking-widest leading-loose whitespace-pre-wrap [text-shadow:0_0_8px_rgba(255,255,255,0.4)]">
+                <TypewriterText text={text} speed={25} delay={1000 + idx * 4500} skip={skipTyping} noCursor />
+              </div>
+           ))}
+           <div className="mt-16 pt-12 pb-12 flex justify-center">
+             <button onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(-1); }} className="px-8 py-3 border border-zinc-700 text-zinc-400 hover:text-cyan-400 hover:border-cyan-400 hover:bg-cyan-900/20 transition-all font-mono text-xs tracking-widest rounded animate-pulse cursor-pointer relative z-50">
+               <TypewriterText text={lang === "vi" ? "[ TIẾP CẬN HỆ THỐNG ]" : "[ ACCESS SYSTEM ]"} delay={skipTyping ? 0 : 23000} skip={skipTyping} noCursor />
+             </button>
+           </div>
+        </div>
+      </main>
+    );
+  }
+
+  // ==========================================
+  // BƯỚC -1: TERMINAL GLITCH BOOT
+  // ==========================================
+  if (step === -1) {
+    return (
+      <main onClick={() => setSkipTyping(true)} className="min-h-screen w-full bg-black text-cyan-500 font-mono p-6 md:p-12 flex flex-col justify-center items-center relative overflow-y-auto">
+        <style dangerouslySetInnerHTML={{__html: `.crt-turn-on { animation: crtOn 1s ease-out forwards; } @keyframes crtOn { 0% { transform: scale(1, 0.01); opacity: 0; filter: brightness(10); } 40% { transform: scale(1, 0.01); opacity: 1; filter: brightness(5); } 100% { transform: scale(1, 1); opacity: 1; filter: brightness(1); } }`}} />
+        <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
+        <div className="max-w-2xl w-full z-10 crt-turn-on relative">
+          {t.bootTermLines.map((text, idx) => (
+            <div key={idx} className="mb-6 text-sm md:text-xl tracking-widest font-bold">
+              <TypewriterText text={text} speed={20} delay={500 + idx * 1200} skip={skipTyping} />
+            </div>
+          ))}
+          <div className="mt-16 relative z-50">
+             <button onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(0); }} className="w-full py-4 border border-cyan-500 hover:bg-cyan-400 hover:text-black transition-all tracking-widest font-bold rounded shadow-[0_0_15px_rgba(34,211,238,0.3)] cursor-pointer relative z-50">
+               <TypewriterText text={lang === "vi" ? "[ XÁC NHẬN TRUY CẬP PROFILE ]" : "[ CONFIRM PROFILE ACCESS ]"} delay={skipTyping ? 0 : 7000} skip={skipTyping} noCursor />
+             </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // ==========================================
   // BƯỚC 15: SHUTDOWN SYSTEM
   // ==========================================
   if (step === 15) {
@@ -536,13 +651,13 @@ export default function Home() {
   }
 
   // ==========================================
-  // BƯỚC 0 & 1: PROFILE & BOOT
+  // BƯỚC 0 & 1: PROFILE & WORKSPACE BOOT
   // ==========================================
   if (step === 0 || step === 1) {
     return (
       <main 
         onClick={() => setSkipTyping(true)}
-        className={`h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-slate-100`}
+        className={`min-h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-slate-100`}
       >
         <div className="fixed inset-0 bg-black/60 z-0 pointer-events-none"></div>
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
@@ -551,7 +666,7 @@ export default function Home() {
           <div className="crt-turn-on w-full max-w-2xl mx-auto my-auto bg-zinc-950/90 border border-cyan-900/50 p-6 md:p-8 rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.9)] backdrop-blur-md">
             <div className="flex justify-between items-center w-full mb-8 pb-4 border-b border-zinc-800">
               <div className="flex items-center gap-4">
-                <span className="text-xs font-mono text-amber-500 tracking-widest animate-pulse">[SECURE_BOOT_v5.0]</span>
+                <span className="text-xs font-mono text-amber-500 tracking-widest animate-pulse">[SECURE_BOOT_v5.1]</span>
                 <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }} className="text-xs font-mono text-zinc-500 hover:text-cyan-400 transition-all cursor-pointer border border-zinc-700 px-2 py-0.5 rounded">
                   {lang === "vi" ? `[ ÂM THANH: ${isMuted ? "TẮT" : "BẬT"} ]` : `[ SOUND: ${isMuted ? "OFF" : "ON"} ]`}
                 </button>
@@ -574,7 +689,7 @@ export default function Home() {
                   <p><TypewriterText text={t.profP2} speed={10} delay={6500} skip={skipTyping} /></p>
                   <p><TypewriterText text={t.profP3} speed={10} delay={8500} skip={skipTyping} /></p>
                 </div>
-                <button type="button" onClick={(e) => { e.stopPropagation(); setStep(1); }} className="w-full py-4 bg-cyan-500/10 border border-cyan-400 text-cyan-400 font-mono font-bold tracking-widest hover:bg-cyan-400 hover:text-black transition-all cursor-pointer rounded shadow-[0_0_15px_rgba(34,211,238,0.3)] z-50 relative">
+                <button type="button" onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(1); }} className="w-full py-4 bg-cyan-500/10 border border-cyan-400 text-cyan-400 font-mono font-bold tracking-widest hover:bg-cyan-400 hover:text-black transition-all cursor-pointer rounded shadow-[0_0_15px_rgba(34,211,238,0.3)] z-50 relative">
                   <TypewriterText text={t.profBtn} delay={11000} skip={skipTyping} noCursor />
                 </button>
               </>
@@ -587,7 +702,7 @@ export default function Home() {
                     <div key={idx} className="flex items-start gap-2"><span className="text-cyan-400 mt-1">&gt;</span><p><TypewriterText text={log} delay={1200 + (idx * 500)} skip={skipTyping} /></p></div>
                   ))}
                 </div>
-                <button type="button" onClick={(e) => { e.stopPropagation(); setStep(2); }} className="w-full py-4 bg-cyan-500/10 border border-cyan-400 text-cyan-400 font-mono font-bold hover:bg-cyan-400 hover:text-black transition-all cursor-pointer rounded shadow-[0_0_15px_rgba(34,211,238,0.3)] z-50 relative">
+                <button type="button" onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(2); }} className="w-full py-4 bg-cyan-500/10 border border-cyan-400 text-cyan-400 font-mono font-bold hover:bg-cyan-400 hover:text-black transition-all cursor-pointer rounded shadow-[0_0_15px_rgba(34,211,238,0.3)] z-50 relative">
                   <TypewriterText text={t.startButton} delay={4000} skip={skipTyping} noCursor />
                 </button>
               </>
@@ -604,15 +719,12 @@ export default function Home() {
   // ==========================================
   if (step === 5) {
     return (
-      <main className="h-screen w-full overflow-y-auto overflow-x-hidden relative bg-black text-slate-100">
+      <main className="min-h-screen w-full overflow-y-auto overflow-x-hidden relative bg-black text-slate-100 flex flex-col justify-center">
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
-        <div className="relative z-20 min-h-full flex flex-col p-4 md:p-8">
-          <div className="w-full max-w-lg mx-auto my-auto text-center">
-            <h1 className="text-4xl font-bold text-red-600 font-mono mb-6 animate-pulse [text-shadow:0_0_15px_rgba(220,38,38,0.8)]">{t.gameOverTitle}</h1>
-            <p className="text-zinc-400 font-mono mb-8 leading-relaxed"><TypewriterText text={t.gameOverDesc} speed={20} /></p>
-            <button onClick={() => window.location.reload()} className="px-6 py-3 border border-red-600 text-red-500 font-mono hover:bg-red-900 transition-all rounded cursor-pointer"><TypewriterText text={t.rebootBtn} delay={1000} noCursor /></button>
-          </div>
-          <CopyrightFooter />
+        <div className="relative z-20 w-full max-w-lg mx-auto p-4 md:p-8 text-center">
+          <h1 className="text-4xl font-bold text-red-600 font-mono mb-6 animate-pulse [text-shadow:0_0_15px_rgba(220,38,38,0.8)]">{t.gameOverTitle}</h1>
+          <p className="text-zinc-400 font-mono mb-8 leading-relaxed"><TypewriterText text={t.gameOverDesc} speed={20} /></p>
+          <button onClick={() => window.location.reload()} className="px-6 py-3 border border-red-600 text-red-500 font-mono hover:bg-red-900 transition-all rounded cursor-pointer relative z-50"><TypewriterText text={t.rebootBtn} delay={1000} noCursor /></button>
         </div>
       </main>
     );
@@ -623,21 +735,18 @@ export default function Home() {
   // ==========================================
   if (step === 13) {
     return (
-      <main className="h-screen w-full overflow-y-auto overflow-x-hidden relative bg-black text-slate-100">
+      <main className="min-h-screen w-full overflow-y-auto overflow-x-hidden relative bg-black text-slate-100 flex flex-col justify-center">
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
-        <div className="relative z-20 min-h-full flex flex-col p-4 md:p-8">
-          <div className="w-full max-w-lg mx-auto my-auto text-center">
-            <h1 className="text-4xl font-bold text-red-600 font-mono mb-6 animate-pulse [text-shadow:0_0_15px_rgba(220,38,38,0.8)]">
-              {lang === "vi" ? "HẾT MẠNG - MẬT MÃ BỊ KHÓA" : "OUT OF STRIKES - CIPHER LOCKED"}
-            </h1>
-            <p className="text-zinc-400 font-mono mb-8 leading-relaxed">
-              {lang === "vi" ? "Bạn đã nhập sai 3 lần. Hệ thống tự động thiết lập lại hiện trường Phần 2." : "You failed 3 times. The system is resetting Part 2 scene."}
-            </p>
-            <button onClick={() => { setStrikesP2(3); setCipherAnswer(""); setStep(7); }} className="px-6 py-3 border border-red-600 text-red-500 font-mono hover:bg-red-900 transition-all rounded cursor-pointer">
-              {lang === "vi" ? "QUAY LẠI HIỆN TRƯỜNG PHẦN 2" : "RETURN TO PART 2 SCENE"}
-            </button>
-          </div>
-          <CopyrightFooter />
+        <div className="relative z-20 w-full max-w-lg mx-auto p-4 md:p-8 text-center">
+          <h1 className="text-4xl font-bold text-red-600 font-mono mb-6 animate-pulse [text-shadow:0_0_15px_rgba(220,38,38,0.8)]">
+            {lang === "vi" ? "HẾT MẠNG - MẬT MÃ BỊ KHÓA" : "OUT OF STRIKES - CIPHER LOCKED"}
+          </h1>
+          <p className="text-zinc-400 font-mono mb-8 leading-relaxed">
+            {lang === "vi" ? "Bạn đã nhập sai 3 lần. Hệ thống tự động thiết lập lại hiện trường Phần 2." : "You failed 3 times. The system is resetting Part 2 scene."}
+          </p>
+          <button onClick={() => { setStrikesP2(3); setCipherAnswer(""); setSkipTyping(false); setStep(7); }} className="px-6 py-3 border border-red-600 text-red-500 font-mono hover:bg-red-900 transition-all rounded cursor-pointer relative z-50">
+            {lang === "vi" ? "QUAY LẠI HIỆN TRƯỜNG PHẦN 2" : "RETURN TO PART 2 SCENE"}
+          </button>
         </div>
       </main>
     );
@@ -648,21 +757,18 @@ export default function Home() {
   // ==========================================
   if (step === 14) {
     return (
-      <main className="h-screen w-full overflow-y-auto overflow-x-hidden relative bg-black text-slate-100">
+      <main className="min-h-screen w-full overflow-y-auto overflow-x-hidden relative bg-black text-slate-100 flex flex-col justify-center">
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
-        <div className="relative z-20 min-h-full flex flex-col p-4 md:p-8">
-          <div className="w-full max-w-lg mx-auto my-auto text-center">
-            <h1 className="text-4xl font-bold text-red-600 font-mono mb-6 animate-pulse [text-shadow:0_0_15px_rgba(220,38,38,0.8)]">
-              {lang === "vi" ? "HỆ THỐNG PHÁT NỔ - THẤT BẠI" : "SYSTEM DETONATED - MISSION FAILED"}
-            </h1>
-            <p className="text-zinc-400 font-mono mb-8 leading-relaxed">
-              {lang === "vi" ? "Trạm xử lý nước thải phát tán khí độc. Hệ thống khôi phục lại thời điểm Akai vừa bước vào trạm Sector 7." : "Toxic gas released. Restoring timeline to when Akai just entered Sector 7."}
-            </p>
-            <button onClick={() => { setStrikesP3(3); setMatrixAnswer(""); setTimeLeft(300); setStep(10); }} className="px-6 py-3 border border-amber-600 text-amber-500 font-mono hover:bg-amber-900 transition-all rounded cursor-pointer">
-              {lang === "vi" ? "THỬ LẠI TRẬN CHIẾN PHẦN 3" : "RETRY PART 3 SHOWDOWN"}
-            </button>
-          </div>
-          <CopyrightFooter />
+        <div className="relative z-20 w-full max-w-lg mx-auto p-4 md:p-8 text-center">
+          <h1 className="text-4xl font-bold text-red-600 font-mono mb-6 animate-pulse [text-shadow:0_0_15px_rgba(220,38,38,0.8)]">
+            {lang === "vi" ? "HỆ THỐNG PHÁT NỔ - THẤT BẠI" : "SYSTEM DETONATED - MISSION FAILED"}
+          </h1>
+          <p className="text-zinc-400 font-mono mb-8 leading-relaxed">
+            {lang === "vi" ? "Trạm xử lý nước thải phát tán khí độc. Hệ thống khôi phục lại thời điểm Akai vừa bước vào trạm Sector 7." : "Toxic gas released. Restoring timeline to when Akai just entered Sector 7."}
+          </p>
+          <button onClick={() => { setStrikesP3(3); setMatrixAnswer(""); setTimeLeft(300); setSkipTyping(false); setStep(10); }} className="px-6 py-3 border border-amber-600 text-amber-500 font-mono hover:bg-amber-900 transition-all rounded cursor-pointer relative z-50">
+            {lang === "vi" ? "THỬ LẠI TRẬN CHIẾN PHẦN 3" : "RETRY PART 3 SHOWDOWN"}
+          </button>
         </div>
       </main>
     );
@@ -673,7 +779,7 @@ export default function Home() {
   // ==========================================
   if (step === 6) {
     return (
-      <main onClick={() => setSkipTyping(true)} className="h-screen w-full overflow-y-auto overflow-x-hidden relative bg-black text-slate-100">
+      <main onClick={() => setSkipTyping(true)} className="min-h-screen w-full overflow-y-auto overflow-x-hidden relative bg-black text-slate-100">
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
         <style dangerouslySetInnerHTML={{__html: `.delayed-fade { animation: fadeIn 2s ease-in 7.5s forwards; opacity: 0; } @keyframes fadeIn { to { opacity: 1; } }`}} />
 
@@ -689,7 +795,7 @@ export default function Home() {
                <img src="/end1.png" alt="Zodiac Symbol" className="w-40 md:w-56 h-auto object-contain drop-shadow-[0_0_25px_rgba(220,38,38,0.7)]" />
             </div>
             <button 
-              onClick={(e) => { e.stopPropagation(); setStep(7); }}
+              onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(7); }}
               className="px-8 py-4 bg-amber-500 text-black font-bold font-mono tracking-widest hover:bg-amber-400 transition-all cursor-pointer shadow-[0_0_20px_rgba(245,158,11,0.4)] rounded animate-pulse z-50 relative"
             >
               <TypewriterText text={t.unlockBtn} delay={skipTyping ? 0 : 8500} skip={skipTyping} noCursor />
@@ -706,7 +812,7 @@ export default function Home() {
   // ==========================================
   if (step === 9) {
     return (
-      <main onClick={() => setSkipTyping(true)} className="h-screen w-full overflow-y-auto overflow-x-hidden relative bg-[url('/end2.png')] bg-cover bg-center bg-fixed text-slate-100">
+      <main onClick={() => setSkipTyping(true)} className="min-h-screen w-full overflow-y-auto overflow-x-hidden relative bg-[url('/end2.png')] bg-cover bg-center bg-fixed text-slate-100">
         <div className="fixed inset-0 bg-black/75 z-0 pointer-events-none"></div>
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
         
@@ -719,7 +825,7 @@ export default function Home() {
               <TypewriterText text={t.p2VictoryDesc} speed={10} delay={500} skip={skipTyping} />
             </div>
             <button 
-              onClick={(e) => { e.stopPropagation(); setTimeLeft(300); setStep(10); }}
+              onClick={(e) => { e.stopPropagation(); setTimeLeft(300); setSkipTyping(false); setStep(10); }}
               className="px-8 py-4 bg-cyan-400 text-black font-bold font-mono tracking-widest hover:bg-cyan-300 transition-all cursor-pointer rounded shadow-[0_0_20px_rgba(56,189,248,0.5)] z-50 relative"
             >
               <TypewriterText text={t.p2FinalBtn} delay={skipTyping ? 0 : 5000} skip={skipTyping} noCursor />
@@ -736,7 +842,7 @@ export default function Home() {
   // ==========================================
   if (step === 12) {
     return (
-      <main onClick={() => setSkipTyping(true)} className="h-screen w-full overflow-y-auto overflow-x-hidden relative bg-[url('/end3.png')] bg-cover bg-center bg-fixed text-slate-100">
+      <main onClick={() => setSkipTyping(true)} className="min-h-screen w-full overflow-y-auto overflow-x-hidden relative bg-[url('/end3.png')] bg-cover bg-center bg-fixed text-slate-100">
         <div className="fixed inset-0 bg-black/80 z-0 pointer-events-none"></div>
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
         <style dangerouslySetInnerHTML={{__html: `.delayed-fade-btns { animation: fadeIn 2s ease-in 10.5s forwards; opacity: 0; } @keyframes fadeIn { to { opacity: 1; } }`}} />
@@ -762,7 +868,7 @@ export default function Home() {
                 {lang === "vi" ? "[ CHƠI LẠI TỪ ĐẦU ]" : "[ REPLAY MISSION ]"}
               </button>
               <button 
-                onClick={(e) => { e.stopPropagation(); setStep(15); }} 
+                onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(15); }} 
                 className="px-6 py-4 bg-red-900/40 border border-red-600 text-red-500 font-bold font-mono tracking-widest hover:bg-red-600 hover:text-white transition-all cursor-pointer rounded"
               >
                 {lang === "vi" ? "[ KẾT THÚC HỆ THỐNG ]" : "[ SYSTEM SHUTDOWN ]"}
@@ -777,13 +883,161 @@ export default function Home() {
   }
 
   // ==========================================
+  // BƯỚC 2, 3, 4: WORKSPACE P1 & TERMINAL P1 (LOGIC CODE)
+  // ==========================================
+  if (step === 2 || step === 3 || step === 4) {
+    return (
+      <main 
+        onClick={() => setSkipTyping(true)}
+        className={`min-h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-slate-100 transition-all duration-1000 flex flex-col`}
+      >
+        <div className="fixed inset-0 bg-black/70 z-0 pointer-events-none"></div>
+        <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
+
+        <div className="relative z-20 min-h-full flex flex-col p-4 md:p-12 max-w-7xl mx-auto w-full pb-32">
+          <TopStatusBar />
+          
+          <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 border-b border-zinc-800 pb-6">
+            <div className="mb-4 md:mb-0">
+              <span className="text-xs tracking-widest text-amber-500 font-mono"><TypewriterText text={t.subtitle} speed={20} skip={skipTyping} /></span>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold font-mono tracking-wider mt-2 text-cyan-400 break-words [text-shadow:0_0_10px_rgba(34,211,238,0.8)]">
+                <TypewriterText text={t.title} speed={25} delay={300} skip={skipTyping} />
+              </h1>
+            </div>
+            <div className="flex gap-4 z-50">
+               <button onClick={(e) => { e.stopPropagation(); setStep(0); }} className="px-4 py-2 border border-zinc-700 bg-zinc-900 hover:border-red-500 hover:text-red-400 text-xs font-mono transition-all rounded cursor-pointer">{t.exitBtn}</button>
+               <button onClick={(e) => { e.stopPropagation(); setLang(lang === "vi" ? "en" : "vi"); }} className="px-4 py-2 border border-zinc-700 bg-zinc-900 hover:border-cyan-400 hover:text-cyan-400 text-xs font-mono transition-all rounded cursor-pointer">{t.langBtn}</button>
+            </div>
+          </header>
+
+          {step === 4 ? (
+            /* TERMINAL CHỐT ÁN P1 */
+            <div className="max-w-3xl mx-auto mt-12 bg-zinc-950/90 border border-cyan-400 p-6 md:p-8 rounded shadow-[0_0_50px_rgba(56,189,248,0.2)] backdrop-blur-md mb-16 animate-fade-in flex flex-col w-full relative z-10">
+              <h2 className="text-xl font-bold font-mono text-cyan-400 mb-6 [text-shadow:0_0_8px_rgba(34,211,238,0.8)]"><TypewriterText text={t.conclusionTitle} speed={20} skip={skipTyping} /></h2>
+              
+              {logicError && (
+                <div className="mb-6 p-4 bg-red-950/80 border border-red-500 text-red-400 font-mono text-sm text-center animate-pulse rounded">
+                  ⚠️ {logicError}
+                </div>
+              )}
+
+              <div className="font-mono text-zinc-300 leading-loose mb-8 whitespace-pre-wrap flex-grow">
+                <TypewriterText text={t.conclusionText} speed={15} delay={500} skip={skipTyping} />
+              </div>
+              <form onSubmit={handleSubmitAnswer} className="flex flex-col gap-4 mt-auto">
+                <input 
+                  type="text" autoFocus value={finalAnswer} onChange={(e) => setFinalAnswer(e.target.value)} placeholder={t.placeholder}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full bg-black border-2 border-zinc-700 focus:border-amber-500 text-amber-500 font-mono p-4 rounded outline-none transition-all text-center tracking-widest text-lg shadow-inner uppercase"
+                />
+                <button type="submit" onClick={(e) => e.stopPropagation()} className="self-end px-8 py-4 bg-cyan-400 text-black font-bold font-mono hover:bg-cyan-300 transition-all cursor-pointer rounded w-full tracking-widest shadow-[0_0_15px_rgba(34,211,238,0.5)]">
+                  {t.submitBtn}
+                </button>
+              </form>
+            </div>
+          ) : step === 3 ? (
+            /* TERMINAL NHẬP MÃ CHUỖI P1 */
+            <div className="max-w-3xl mx-auto mt-6 bg-zinc-950/95 border border-cyan-500 p-6 md:p-10 rounded shadow-[0_0_50px_rgba(34,211,238,0.2)] backdrop-blur-md mb-16 animate-fade-in flex flex-col w-full relative z-10">
+              <h2 className="text-xl font-bold font-mono text-cyan-400 mb-6 [text-shadow:0_0_8px_rgba(34,211,238,0.8)]"><TypewriterText text={t.p1BoardTitle} speed={20} skip={skipTyping} /></h2>
+              
+              {logicError && (
+                <div className="mb-6 p-4 bg-red-950/80 border border-red-500 text-red-400 font-mono text-sm text-center animate-pulse rounded">
+                  ⚠️ {logicError}
+                </div>
+              )}
+
+              <div className="font-mono text-zinc-300 leading-relaxed mb-8 whitespace-pre-wrap bg-black/70 p-6 rounded border border-zinc-900 text-lg tracking-wide">
+                <TypewriterText text={t.p1BoardDesc} speed={15} delay={300} skip={skipTyping} />
+              </div>
+
+              <form onSubmit={handleLogicCodeSubmit} className="flex flex-col gap-4 mt-auto">
+                <input 
+                  type="text" autoFocus value={logicAnswer} onChange={(e) => setLogicAnswer(e.target.value)} placeholder={t.p1BoardPlaceholder}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full bg-black border-2 border-zinc-700 focus:border-cyan-500 text-cyan-400 font-mono p-4 rounded outline-none transition-all text-2xl tracking-widest text-center shadow-inner"
+                />
+                <button type="submit" onClick={(e) => e.stopPropagation()} className="self-end px-8 py-4 bg-cyan-500 text-black font-bold font-mono hover:bg-cyan-400 transition-all cursor-pointer rounded w-full tracking-widest shadow-[0_0_15px_rgba(34,211,238,0.5)]">
+                  {t.p1BoardSubmit}
+                </button>
+              </form>
+            </div>
+          ) : (
+            /* WORKSPACE PHẦN 1 */
+            <>
+              <div className="mb-10 p-6 bg-zinc-950/80 border border-cyan-900/60 rounded flex flex-col h-auto relative z-10">
+                <h2 className="text-md font-bold font-mono text-amber-500 mb-4 border-b border-zinc-800 pb-2 [text-shadow:0_0_8px_rgba(245,158,11,0.8)]">
+                  <TypewriterText text={t.briefingTitle} speed={20} delay={500} skip={skipTyping} />
+                </h2>
+                <div className="font-mono text-sm text-cyan-400 space-y-3 whitespace-pre-wrap flex-grow">
+                  {t.briefingLines.map((line, idx) => (
+                    <p key={idx}><TypewriterText text={line} speed={10} delay={1000 + (idx * 1200)} skip={skipTyping} noCursor={idx !== t.briefingLines.length - 1} /></p>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16 h-auto relative z-10">
+                {t.cards.map((card, index) => {
+                  const baseDelay = 6500 + (index * 600);
+                  return (
+                    <div key={card.id} onClick={(e) => { e.stopPropagation(); setSelectedEvidence(card); }} className="p-6 bg-zinc-950/90 border border-zinc-700 rounded shadow-[0_0_15px_rgba(0,0,0,0.8)] relative backdrop-blur-md z-30 flex flex-col hover:border-cyan-700 transition-all hover:-translate-y-1 h-auto cursor-pointer">
+                      <div className="flex justify-between items-start mb-4 border-b border-zinc-800 pb-2">
+                        <span className="text-xs font-mono font-bold text-amber-500 [text-shadow:0_0_5px_rgba(245,158,11,0.5)]"><TypewriterText text={card.title} speed={15} delay={baseDelay} skip={skipTyping} /></span>
+                        <span className="text-xs font-mono text-cyan-600"><TypewriterText text={card.tag} speed={15} delay={baseDelay} skip={skipTyping} /></span>
+                      </div>
+                      <div className="text-zinc-300 text-sm leading-relaxed flex-grow mb-4">
+                        <TypewriterText text={card.desc} speed={10} delay={baseDelay + 300} skip={skipTyping} />
+                      </div>
+                      <div className="text-xs text-cyan-400 font-mono mt-auto">{lang === "vi" ? "[ Xem chi tiết -> ]" : "[ View detail -> ]"}</div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black via-black/90 to-transparent flex justify-center z-40">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(3); }}
+                  className="px-10 py-4 bg-amber-500 text-black font-bold font-mono tracking-widest text-sm md:text-lg shadow-[0_0_30px_rgba(245,158,11,0.3)] hover:bg-amber-400 transition-all cursor-pointer rounded-sm hover:scale-105"
+                >
+                  <TypewriterText text={t.openBoardBtn} speed={15} delay={9500} skip={skipTyping} noCursor />
+                </button>
+              </div>
+            </>
+          )}
+          
+          <div className="mt-auto pt-8"><CopyrightFooter /></div>
+        </div>
+
+        {/* MODAL CHI TIẾT P1 */}
+        {selectedEvidence && (
+          <div onClick={(e) => e.stopPropagation()} className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 md:p-8 z-[100] overflow-y-auto">
+            <div className="bg-zinc-950 border border-cyan-400 w-full max-w-2xl max-h-full overflow-y-auto p-6 md:p-8 rounded font-mono shadow-[0_0_40px_rgba(56,189,248,0.2)] relative mt-10 mb-10">
+              <h2 className="text-xl font-bold text-slate-100 mb-6 border-l-4 border-cyan-400 pl-4 [text-shadow:0_0_8px_rgba(34,211,238,0.6)]">
+                <TypewriterText text={selectedEvidence.title} speed={20} />
+              </h2>
+              <div className="text-zinc-300 text-sm leading-loose mb-8 bg-black/60 p-4 md:p-6 rounded border border-zinc-800 whitespace-pre-wrap">
+                <TypewriterText text={selectedEvidence.detail} speed={10} delay={200} />
+              </div>
+              
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-zinc-800 pt-6">
+                <button onClick={() => setSelectedEvidence(null)} className="text-zinc-500 hover:text-white transition-all text-sm w-full sm:w-auto py-2">
+                  {lang === "vi" ? "[ ĐÓNG TÀI LIỆU ]" : "[ CLOSE DOCUMENT ]"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+    );
+  }
+
+  // ==========================================
   // BƯỚC 10 & 11: WORKSPACE PHẦN 3 & TERMINAL P3 (MATRIX LOCK + TIMER)
   // ==========================================
   if (step === 10 || step === 11) {
     return (
       <main 
         onClick={() => setSkipTyping(true)}
-        className={`h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-slate-100 transition-all duration-1000 flex flex-col`}
+        className={`min-h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-slate-100 transition-all duration-1000 flex flex-col`}
       >
         <div className="fixed inset-0 bg-black/80 z-0 pointer-events-none"></div>
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
@@ -845,7 +1099,7 @@ export default function Home() {
                 </h2>
                 <div className="font-mono text-sm text-zinc-300 space-y-3 whitespace-pre-wrap flex-grow">
                   {t.p3BriefingLines.map((line, idx) => (
-                    <p key={idx}><TypewriterText text={line} speed={10} delay={1000 + (idx * 1200)} skip={skipTyping} /></p>
+                    <p key={idx}><TypewriterText text={line} speed={10} delay={1000 + (idx * 1200)} skip={skipTyping} noCursor={idx !== t.p3BriefingLines.length - 1} /></p>
                   ))}
                 </div>
               </div>
@@ -874,7 +1128,7 @@ export default function Home() {
 
               <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black via-black/90 to-transparent flex justify-center z-40">
                 <button 
-                  onClick={(e) => { e.stopPropagation(); setTimeLeft(300); setStep(11); }}
+                  onClick={(e) => { e.stopPropagation(); setTimeLeft(300); setSkipTyping(false); setStep(11); }}
                   className="px-10 py-4 bg-amber-500 text-black font-bold font-mono tracking-widest text-sm md:text-lg shadow-[0_0_30px_rgba(245,158,11,0.4)] hover:bg-amber-400 transition-all cursor-pointer rounded-sm hover:scale-105"
                 >
                   <TypewriterText text={t.p3OpenTerminal} speed={15} delay={7500} skip={skipTyping} noCursor />
@@ -915,7 +1169,7 @@ export default function Home() {
     return (
       <main 
         onClick={() => setSkipTyping(true)}
-        className={`h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-slate-100 transition-all duration-1000 flex flex-col`}
+        className={`min-h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-slate-100 transition-all duration-1000 flex flex-col`}
       >
         <div className="fixed inset-0 bg-black/80 z-0 pointer-events-none"></div>
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
@@ -947,27 +1201,18 @@ export default function Home() {
                 </div>
               )}
 
-              <div className="font-mono text-zinc-300 leading-relaxed mb-6 whitespace-pre-wrap bg-black/60 p-4 rounded border border-zinc-900 text-sm">
+              <div className="font-mono text-zinc-300 leading-relaxed mb-6 whitespace-pre-wrap bg-black/60 p-4 rounded border border-zinc-900 text-sm md:text-base">
                 <TypewriterText text={t.p2TerminalDesc} speed={15} delay={300} skip={skipTyping} />
               </div>
 
               {/* BẢNG CHỮ CẢI A-Z */}
               <div className="mb-8 bg-zinc-900/90 border border-red-900/60 p-6 rounded font-mono shadow-inner">
-                <p className="text-amber-400 font-bold mb-4 tracking-wider text-center text-sm">{lang === "vi" ? "📋 BẢNG THAM CHIẾU KÝ TỰ A-Z (LÙI 3 BƯỚC):" : "📋 A-Z CIPHER REFERENCE (SHIFT -3):"}</p>
+                <p className="text-amber-400 font-bold mb-4 tracking-wider text-center text-sm">{lang === "vi" ? "📋 BẢNG THAM CHIẾU KÝ TỰ A-Z:" : "📋 A-Z CIPHER REFERENCE:"}</p>
                 <div className="space-y-4 text-center">
                   <div className="overflow-x-auto pb-2">
-                    <span className="text-zinc-400 block text-xs mb-1 font-bold">{lang === "vi" ? "CHỮ TRÊN MÃ (Mã hóa):" : "CIPHER TEXT:"}</span>
-                    <div className="inline-flex gap-1 md:gap-2 text-red-400 font-bold text-sm md:text-base">
-                      {["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"].map((char, idx) => (
-                        <span key={idx} className="w-6 md:w-8 py-1.5 bg-black/90 border border-red-900 rounded">{char}</span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="overflow-x-auto pt-2 border-t border-zinc-800">
-                    <span className="text-cyan-400 block text-xs mb-1 font-bold">{lang === "vi" ? "CHỮ GỐC (Lùi 3 ký tự):" : "PLAIN TEXT (Shift -3):"}</span>
                     <div className="inline-flex gap-1 md:gap-2 text-cyan-300 font-bold text-sm md:text-base">
-                      {["X","Y","Z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W"].map((char, idx) => (
-                        <span key={idx} className="w-6 md:w-8 py-1.5 bg-black/90 border border-cyan-900 rounded">{char}</span>
+                      {["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"].map((char, idx) => (
+                        <span key={idx} className="w-6 md:w-8 py-1.5 bg-black/90 border border-cyan-900 rounded shadow-inner">{char}</span>
                       ))}
                     </div>
                   </div>
@@ -994,7 +1239,7 @@ export default function Home() {
                 </h2>
                 <div className="font-mono text-sm text-zinc-300 space-y-3 whitespace-pre-wrap flex-grow">
                   {t.p2BriefingLines.map((line, idx) => (
-                    <p key={idx}><TypewriterText text={line} speed={10} delay={1000 + (idx * 1200)} skip={skipTyping} /></p>
+                    <p key={idx}><TypewriterText text={line} speed={10} delay={1000 + (idx * 1200)} skip={skipTyping} noCursor={idx !== t.p2BriefingLines.length - 1} /></p>
                   ))}
                 </div>
               </div>
@@ -1023,7 +1268,7 @@ export default function Home() {
 
               <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black via-black/90 to-transparent flex justify-center z-40">
                 <button 
-                  onClick={(e) => { e.stopPropagation(); setStep(8); }}
+                  onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(8); }}
                   className="px-10 py-4 bg-red-600 text-white font-bold font-mono tracking-widest text-sm md:text-lg shadow-[0_0_30px_rgba(239,68,68,0.4)] hover:bg-red-500 transition-all cursor-pointer rounded-sm hover:scale-105"
                 >
                   <TypewriterText text={t.p2OpenTerminal} speed={15} delay={7500} skip={skipTyping} noCursor />
@@ -1070,180 +1315,4 @@ export default function Home() {
       </main>
     );
   }
-
-  // ==========================================
-  // BƯỚC 2, 3, 4: WORKSPACE P1, MASTER BOARD, TERMINAL P1
-  // ==========================================
-  return (
-    <main 
-      onClick={() => setSkipTyping(true)}
-      className={`h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-slate-100 transition-all duration-1000 flex flex-col`}
-    >
-      <div className="fixed inset-0 bg-black/70 z-0 pointer-events-none"></div>
-      <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
-
-      <div className="relative z-20 min-h-full flex flex-col p-4 md:p-12 max-w-7xl mx-auto w-full pb-32">
-        <TopStatusBar />
-        
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 border-b border-zinc-800 pb-6">
-          <div className="mb-4 md:mb-0">
-            <span className="text-xs tracking-widest text-amber-500 font-mono"><TypewriterText text={t.subtitle} speed={20} skip={skipTyping} /></span>
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold font-mono tracking-wider mt-2 text-cyan-400 break-words [text-shadow:0_0_10px_rgba(34,211,238,0.8)]">
-              <TypewriterText text={t.title} speed={25} delay={300} skip={skipTyping} />
-            </h1>
-          </div>
-          <div className="flex gap-4 z-50">
-             <button onClick={(e) => { e.stopPropagation(); setStep(0); }} className="px-4 py-2 border border-zinc-700 bg-zinc-900 hover:border-red-500 hover:text-red-400 text-xs font-mono transition-all rounded cursor-pointer">{t.exitBtn}</button>
-             <button onClick={(e) => { e.stopPropagation(); setLang(lang === "vi" ? "en" : "vi"); }} className="px-4 py-2 border border-zinc-700 bg-zinc-900 hover:border-cyan-400 hover:text-cyan-400 text-xs font-mono transition-all rounded cursor-pointer">{t.langBtn}</button>
-          </div>
-        </header>
-
-        {step === 4 ? (
-          <div className="max-w-3xl mx-auto mt-12 bg-zinc-950/90 border border-cyan-400 p-6 md:p-8 rounded shadow-[0_0_50px_rgba(56,189,248,0.2)] backdrop-blur-md mb-16 animate-fade-in flex flex-col w-full relative z-10">
-            <h2 className="text-xl font-bold font-mono text-cyan-400 mb-6 [text-shadow:0_0_8px_rgba(34,211,238,0.8)]"><TypewriterText text={t.conclusionTitle} speed={20} skip={skipTyping} /></h2>
-            <div className="font-mono text-zinc-300 leading-loose mb-8 whitespace-pre-wrap flex-grow">
-              <TypewriterText text={t.conclusionText} speed={15} delay={500} skip={skipTyping} />
-            </div>
-            <form onSubmit={handleSubmitAnswer} className="flex flex-col gap-4 mt-auto">
-              <input 
-                type="text" autoFocus value={finalAnswer} onChange={(e) => setFinalAnswer(e.target.value)} placeholder={t.placeholder}
-                onClick={(e) => e.stopPropagation()}
-                className="w-full bg-black border-2 border-zinc-700 focus:border-amber-500 text-amber-500 font-mono p-4 rounded outline-none transition-all text-center tracking-widest text-lg shadow-inner"
-              />
-              <button type="submit" onClick={(e) => e.stopPropagation()} className="self-end px-8 py-4 bg-cyan-400 text-black font-bold font-mono hover:bg-cyan-300 transition-all cursor-pointer rounded w-full tracking-widest shadow-[0_0_15px_rgba(34,211,238,0.5)]">
-                {t.submitBtn}
-              </button>
-            </form>
-          </div>
-        ) : step === 3 ? (
-          <div className="w-full bg-zinc-950/90 border border-cyan-500/50 p-4 md:p-6 rounded shadow-[0_0_50px_rgba(56,189,248,0.1)] backdrop-blur-md mb-16 animate-fade-in flex flex-col relative z-10">
-            <h2 className="text-xl font-bold font-mono text-amber-500 mb-2 [text-shadow:0_0_8px_rgba(245,158,11,0.8)]">
-              <TypewriterText text={t.boardTitle} speed={20} skip={skipTyping} />
-            </h2>
-            <p className="font-mono text-sm text-cyan-400 mb-8 pb-4 border-b border-zinc-800">
-              <TypewriterText text={t.boardDesc} speed={15} delay={400} skip={skipTyping} />
-            </p>
-
-            {errorMsgP1 && (
-              <div className="mb-6 p-4 bg-red-950/80 border border-red-500 text-red-400 font-mono text-sm text-center animate-pulse rounded">
-                ⚠️ {errorMsgP1}
-              </div>
-            )}
-
-            <div className="overflow-x-auto flex-grow" onClick={(e) => e.stopPropagation()}>
-              <table className="w-full text-left font-mono text-sm">
-                <thead>
-                  <tr className="border-b border-cyan-900/50 text-amber-500 bg-cyan-950/20">
-                    <th className="p-4 whitespace-nowrap"><TypewriterText text={t.boardHeaders[0]} delay={1000} skip={skipTyping} /></th>
-                    <th className="p-4 whitespace-nowrap"><TypewriterText text={t.boardHeaders[1]} delay={1000} skip={skipTyping} /></th>
-                    <th className="p-4 min-w-[250px]"><TypewriterText text={t.boardHeaders[2]} delay={1000} skip={skipTyping} /></th>
-                    <th className="p-4 min-w-[250px]"><TypewriterText text={t.boardHeaders[3]} delay={1000} skip={skipTyping} /></th>
-                    <th className="p-4 text-center whitespace-nowrap"><TypewriterText text={t.boardHeaders[4]} delay={1000} skip={skipTyping} noCursor /></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {t.boardRows.map((row, index) => {
-                    const isSelected = selectedRows.includes(row.id);
-                    const baseDelay = 1500 + (index * 600);
-                    return (
-                      <tr 
-                        key={row.id} onClick={() => handleToggleRow(row.id)}
-                        className={`border-b border-zinc-800 transition-all cursor-pointer group hover:bg-cyan-950/30
-                          ${isSelected ? "bg-cyan-950/40 border-l-4 border-l-cyan-400" : ""}`}
-                      >
-                        <td className="p-4 text-cyan-400 font-bold align-top"><TypewriterText text={row.time} speed={10} delay={baseDelay} skip={skipTyping} /></td>
-                        <td className="p-4 text-amber-500 align-top"><TypewriterText text={row.source} speed={10} delay={baseDelay+100} skip={skipTyping} /></td>
-                        <td className="p-4 text-zinc-300 align-top"><TypewriterText text={row.data} speed={10} delay={baseDelay+200} skip={skipTyping} /></td>
-                        <td className={`p-4 align-top ${isSelected ? "text-cyan-300 font-bold [text-shadow:0_0_5px_currentColor]" : "text-zinc-400"}`}>
-                          <TypewriterText text={row.anomaly} speed={10} delay={baseDelay+400} skip={skipTyping} noCursor={index !== t.boardRows.length - 1} />
-                        </td>
-                        <td className="p-4 text-center align-middle">
-                          <div className={`w-6 h-6 mx-auto border flex items-center justify-center transition-all ${isSelected ? 'border-cyan-400 bg-cyan-400 text-black shadow-[0_0_10px_rgba(34,211,238,0.8)]' : 'border-zinc-600'}`}>
-                            {isSelected && "✓"}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {selectedRows.length === 3 && (
-              <div className="mt-8 flex justify-end animate-fade-in mt-auto">
-                <button 
-                  onClick={(e) => { e.stopPropagation(); handleAnalyzeBoard(); }}
-                  className="px-8 py-4 bg-cyan-400 text-black font-bold font-mono tracking-widest hover:bg-cyan-300 transition-all cursor-pointer rounded shadow-[0_0_15px_rgba(34,211,238,0.5)] z-50 relative"
-                >
-                  <TypewriterText text={t.analyzeBoardBtn} speed={20} skip={skipTyping} noCursor />
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <>
-            <div className="mb-10 p-6 bg-zinc-950/80 border border-cyan-900/60 rounded flex flex-col h-auto relative z-10">
-              <h2 className="text-md font-bold font-mono text-amber-500 mb-4 border-b border-zinc-800 pb-2 [text-shadow:0_0_8px_rgba(245,158,11,0.8)]">
-                <TypewriterText text={t.briefingTitle} speed={20} delay={500} skip={skipTyping} />
-              </h2>
-              <div className="font-mono text-sm text-cyan-400 space-y-3 whitespace-pre-wrap flex-grow">
-                {t.briefingLines.map((line, idx) => (
-                  <p key={idx}><TypewriterText text={line} speed={10} delay={1000 + (idx * 1200)} skip={skipTyping} noCursor={idx !== t.briefingLines.length - 1} /></p>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16 h-auto relative z-10">
-              {t.cards.map((card, index) => {
-                const baseDelay = 6500 + (index * 600);
-                return (
-                  <div key={card.id} onClick={(e) => { e.stopPropagation(); setSelectedEvidence(card); }} className="p-6 bg-zinc-950/90 border border-zinc-700 rounded shadow-[0_0_15px_rgba(0,0,0,0.8)] relative backdrop-blur-md z-30 flex flex-col hover:border-cyan-700 transition-all hover:-translate-y-1 h-auto cursor-pointer">
-                    <div className="flex justify-between items-start mb-4 border-b border-zinc-800 pb-2">
-                      <span className="text-xs font-mono font-bold text-amber-500 [text-shadow:0_0_5px_rgba(245,158,11,0.5)]"><TypewriterText text={card.title} speed={15} delay={baseDelay} skip={skipTyping} /></span>
-                      <span className="text-xs font-mono text-cyan-600"><TypewriterText text={card.tag} speed={15} delay={baseDelay} skip={skipTyping} /></span>
-                    </div>
-                    <div className="text-zinc-300 text-sm leading-relaxed flex-grow mb-4">
-                      <TypewriterText text={card.desc} speed={10} delay={baseDelay + 300} skip={skipTyping} />
-                    </div>
-                    <div className="text-xs text-cyan-400 font-mono mt-auto">{lang === "vi" ? "[ Xem chi tiết -> ]" : "[ View detail -> ]"}</div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black via-black/90 to-transparent flex justify-center z-40">
-              <button 
-                onClick={(e) => { e.stopPropagation(); setStep(3); }}
-                className="px-10 py-4 bg-amber-500 text-black font-bold font-mono tracking-widest text-sm md:text-lg shadow-[0_0_30px_rgba(245,158,11,0.4)] hover:bg-amber-400 transition-all cursor-pointer rounded-sm hover:scale-105"
-              >
-                <TypewriterText text={t.openBoardBtn} speed={15} delay={9500} skip={skipTyping} noCursor />
-              </button>
-            </div>
-          </>
-        )}
-        
-        <div className="mt-auto pt-8"><CopyrightFooter /></div>
-      </div>
-
-      {/* MODAL CHI TIẾT P1 */}
-      {selectedEvidence && (
-        <div onClick={(e) => e.stopPropagation()} className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 md:p-8 z-[100] overflow-y-auto">
-          <div className="bg-zinc-950 border border-cyan-400 w-full max-w-2xl max-h-full overflow-y-auto p-6 md:p-8 rounded font-mono shadow-[0_0_40px_rgba(56,189,248,0.2)] relative mt-10 mb-10">
-            <h2 className="text-xl font-bold text-slate-100 mb-6 border-l-4 border-cyan-400 pl-4 [text-shadow:0_0_8px_rgba(34,211,238,0.6)]">
-              <TypewriterText text={selectedEvidence.title} speed={20} />
-            </h2>
-            <div className="text-zinc-300 text-sm leading-loose mb-8 bg-black/60 p-4 md:p-6 rounded border border-zinc-800 whitespace-pre-wrap">
-              <TypewriterText text={selectedEvidence.detail} speed={10} delay={200} />
-            </div>
-            
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-zinc-800 pt-6">
-              <button onClick={() => setSelectedEvidence(null)} className="text-zinc-500 hover:text-white transition-all text-sm w-full sm:w-auto py-2">
-                {lang === "vi" ? "[ ĐÓNG TÀI LIỆU ]" : "[ CLOSE DOCUMENT ]"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </main>
-  );
 }
