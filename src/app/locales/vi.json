@@ -1,0 +1,27 @@
+{
+  "title": "HỒ SƠ ÁN MẠNG #2215: CỰ LY TỬ THẦN",
+  "subtitle": "Hệ thống lưu trữ dữ liệu điều tra nội bộ - Cảnh sát Metropolitan",
+  "lang_toggle": "English",
+  "evidence": {
+    "forensic": {
+      "title": "Bản án / Pháp y",
+      "content": "Nạn nhân: David Vance. Thời gian tử vong chính xác: từ 22:12 đến 22:18 do vết thương do súng bắn ở cự ly gần tại biệt thự ven hồ."
+    },
+    "map": {
+      "title": "Sơ đồ khoảng cách",
+      "content": "Biệt thự -> Siêu thị Trung tâm: 15 phút. \nBiệt thự -> Trạm xăng Ngoại ô: 18 phút. \nSiêu thị -> Trạm xăng: 25 phút."
+    },
+    "wife_receipt": {
+      "title": "Hóa đơn Siêu thị (Vợ - Sarah)",
+      "content": "Thời gian in: 22:10. Địa điểm: Siêu thị Trung tâm. Mặt hàng: 1 bịch sữa lớn."
+    },
+    "son_receipt": {
+      "title": "Biên lai Trạm xăng (Con trai - David)",
+      "content": "Thời gian in: 22:12. Địa điểm: Trạm xăng Ngoại ô. Số lượng: 50 lít xăng. (Thông số kỹ thuật xe của Leo: Bình xăng tối đa chỉ chứa 45 lít)."
+    }
+  },
+  "deduction": {
+    "prompt": "Hãy phân tích mốc thời gian di chuyển và định mức vật lý để tìm ra kẻ dối trá!",
+    "accuse_btn": "KẾT LUẬN VỤ ÁN"
+  }
+}

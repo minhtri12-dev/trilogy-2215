@@ -1,0 +1,27 @@
+{
+  "title": "CASE FILE #2215: DEAD DISTANCE",
+  "subtitle": "Internal Investigation Database - Metropolitan Police",
+  "lang_toggle": "Tiếng Việt",
+  "evidence": {
+    "forensic": {
+      "title": "Forensic Report",
+      "content": "Victim: David Vance. Exact Time of Death: between 22:12 and 22:18 due to close-range gunshot wound at the lakeside villa."
+    },
+    "map": {
+      "title": "Distance Schematic",
+      "content": "Villa -> Central Supermarket: 15 mins. \nVilla -> Suburban Gas Station: 18 mins. \nSupermarket -> Gas Station: 25 mins."
+    },
+    "wife_receipt": {
+      "title": "Supermarket Receipt (Wife - Sarah)",
+      "content": "Print Time: 22:10. Location: Central Supermarket. Item: 1 large milk carton."
+    },
+    "son_receipt": {
+      "title": "Gas Station Receipt (Son - Leo)",
+      "content": "Print Time: 22:12. Location: Suburban Gas Station. Volume: 50 liters. (Leo's Car Specs: Max fuel tank capacity is 45 liters)."
+    }
+  },
+  "deduction": {
+    "prompt": "Analyze the travel timeline and physical limits to expose the liar!",
+    "accuse_btn": "SOLVE THE CASE"
+  }
+}
