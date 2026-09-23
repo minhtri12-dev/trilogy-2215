@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 
 // --- HOOK: HIỆU ỨNG CHỮ ĐÁNH MÁY TERMINAL HIỆN ĐẠI ---
-const useTypewriter = (text, speed = 5, delay = 0, skip = false) => {
+const useTypewriter = (text, speed = 15, delay = 0, skip = false) => {
   const [displayedText, setDisplayedText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
@@ -38,7 +38,7 @@ const useTypewriter = (text, speed = 5, delay = 0, skip = false) => {
   return { displayedText, isTyping };
 };
 
-const TypewriterText = ({ text, speed = 5, delay = 0, className, skip = false, noCursor = false }) => {
+const TypewriterText = ({ text, speed = 15, delay = 0, className, skip = false, noCursor = false }) => {
   const { displayedText, isTyping } = useTypewriter(text, speed, delay, skip);
   return (
     <span className={`${className || ""} [text-shadow:0_0_8px_currentColor] transition-all`}>
@@ -227,7 +227,7 @@ export default function Home() {
       rebootBtn: "[ TẢI LẠI HỆ THỐNG ]",
 
       conclusionTitle: ">> BƯỚC CUỐI: LẬT TẨY PHƯƠNG THỨC <<",
-      conclusionText: "Mã chuỗi 10-5-5 hoàn toàn khớp lệnh! Mâu thuẫn Tam Giác Logic đã được giải:\nHắn dừng xe 10 phút để đánh tráo, và dùng 5 Lít xăng dư bơm vào can nhựa cho máy phát điện.\n\nNHƯNG Sarah mù công nghệ. Hãy trả lời câu hỏi cuối cùng: Cỗ máy nào, hay đúng hơn là hệ thống nào tại biệt thự, đã bị hacker thâm nhập để hạ nhiệt độ phòng xuống 0°C nhằm thay đổi thời gian tử vong?",
+      conclusionText: "Mã chuỗi 10-5-5 hoàn toàn khớp lệnh! Mâu thuẫn Tam Giác Logic đã được giải:\nHắn dừng xe 10 phút để đánh tráo, và dùng 5 Lít xăng dư bơm vào can nhựa cho máy phát điện.\n\nNHƯNG Sarah không am hiểu công nghệ. Hãy trả lời câu hỏi cuối cùng: Hệ thống nào tại biệt thự, đã bị Hacker thâm nhập để hạ nhiệt độ phòng xuống 0°C nhằm thay đổi thời gian tử vong?",
       placeholder: "Nhập tên hệ thống...",
       submitBtn: "[ CHỐT ÁN ]",
       
@@ -252,8 +252,8 @@ export default function Home() {
       ],
       p2OpenTerminal: "[ TRUY CẬP BÀN GIẢI MÃ KÝ TỰ (CIPHER TERMINAL) ]",
       p2TerminalTitle: ">> BÀN GIẢI MÃ KÝ TỰ (CAESAR CIPHER) <<",
-      p2TerminalDesc: "Mật mã Caesar luôn cần một con số để dịch chuyển. Zodiac là kẻ kiêu ngạo, hắn luôn nhắc nhở về những tác phẩm của mình. Hãy tìm **số lượng sinh mạng** đã bị tước đoạt trong đêm lạnh giá tại biệt thự Vance (Vụ án Phần 1) để làm Khóa Key lùi lại.\n\nDãy mã hóa: W K L V - L V - M X V W - W K H - E H J L Q Q L Q J",
-      p2Placeholder: "Nhập thông điệp sau khi giải mã (Tiếng Anh, không dấu)...",
+      p2TerminalDesc: "Mật mã Caesar luôn cần một con số để dịch chuyển. Zodiac là kẻ kiêu ngạo, hắn luôn nhắc nhở về những tác phẩm của mình. Hãy tìm **số lượng sinh mạng** đã bị tước đoạt trong đêm lạnh giá tại biệt thự Vance để biết khoá Key.\n\nDãy mã hóa: W K L V - L V - M X V W - W K H - E H J L Q Q L Q J",
+      p2Placeholder: "Nhập thông điệp sau khi giải mã...",
       p2Submit: "[ GIẢI MÃ & TRUY TÌM TỌA ĐỘ ]",
       p2VictoryTitle: "TỌA ĐỘ ĐÃ ĐƯỢC XÁC ĐỊNH",
       p2VictoryDesc: "Xuất sắc, Đặc vụ Akai!\nKhóa Key chính là số 3 (Tương ứng 3 nạn nhân nhà Vance). Bằng cách lùi mỗi chữ cái lại đúng 3 bước (W lùi 3 -> T, K lùi 3 -> H...), đoạn mã đã chuyển hóa hoàn hảo thành:\n\n'THIS IS JUST THE BEGINNING'\n\n(Đây chỉ là điểm bắt đầu).\n\nHệ thống định vị radar phát hiện tín hiệu từ chiếc USB ẩn đã kết nối vào trạm xử lý nước thải bỏ hoang Sector 7. Zodiac đang đợi bạn ở đó cho trận chiến cuối cùng !",
@@ -570,13 +570,21 @@ export default function Home() {
   // BƯỚC -3: CLICK TO START (Enable Audio)
   // ==========================================
   if (step === -3) {
+    const handleStart = (e) => {
+      setIsMuted(false); 
+      if(bgm) bgm.play(); 
+      setStep(-2);
+    };
+
     return (
       <main 
-        onClick={() => { setIsMuted(false); if(bgm) bgm.play(); setStep(-2); }} 
-        className="h-screen w-full bg-black flex items-center justify-center cursor-pointer scanlines"
+        onClick={handleStart}
+        onTouchStart={handleStart}
+        className="h-screen w-full bg-black flex items-center justify-center cursor-pointer relative"
       >
-         <div className="text-zinc-500 font-mono tracking-widest animate-pulse text-sm text-center px-4">
-            {lang === "vi" ? "[ NHẤN ENTER HOẶC CLICK ĐỂ BẮT ĐẦU ]" : "[ PRESS ENTER OR CLICK TO START ]"}
+         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
+         <div className="text-zinc-500 font-mono tracking-widest animate-pulse text-sm text-center px-4 relative z-10">
+            {lang === "vi" ? "[ NHẤN ENTER HOẶC CHẠM MÀN HÌNH ĐỂ BẮT ĐẦU ]" : "[ PRESS ENTER OR TAP SCREEN TO START ]"}
          </div>
       </main>
     );
@@ -642,7 +650,7 @@ export default function Home() {
   // ==========================================
   if (step === 15) {
     return (
-      <main className="h-screen w-full flex flex-col items-center justify-center bg-black text-zinc-600 font-mono text-sm scanlines relative">
+      <main className="h-screen w-full flex flex-col items-center justify-center bg-black text-zinc-600 font-mono text-sm relative">
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
         <div className="animate-pulse mb-4 z-10 text-lg">SYSTEM SHUTDOWN COMPLETE.</div>
         <div className="z-10">{lang === "vi" ? "BẠN CÓ THỂ ĐÓNG TAB TRÌNH DUYỆT NÀY." : "YOU MAY CLOSE THIS WINDOW."}</div>
@@ -667,11 +675,11 @@ export default function Home() {
             <div className="flex justify-between items-center w-full mb-8 pb-4 border-b border-zinc-800">
               <div className="flex items-center gap-4">
                 <span className="text-xs font-mono text-amber-500 tracking-widest animate-pulse">[SECURE_BOOT_v5.1]</span>
-                <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }} className="text-xs font-mono text-zinc-500 hover:text-cyan-400 transition-all cursor-pointer border border-zinc-700 px-2 py-0.5 rounded">
+                <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }} className="text-xs font-mono text-zinc-500 hover:text-cyan-400 transition-all cursor-pointer border border-zinc-700 px-2 py-0.5 rounded z-50 relative">
                   {lang === "vi" ? `[ ÂM THANH: ${isMuted ? "TẮT" : "BẬT"} ]` : `[ SOUND: ${isMuted ? "OFF" : "ON"} ]`}
                 </button>
               </div>
-              <button onClick={(e) => { e.stopPropagation(); setLang(lang === "vi" ? "en" : "vi"); }} className="px-3 py-1.5 border border-zinc-600 bg-zinc-900 hover:border-cyan-400 hover:text-cyan-400 transition-all cursor-pointer rounded text-xs font-mono z-50">
+              <button onClick={(e) => { e.stopPropagation(); setLang(lang === "vi" ? "en" : "vi"); }} className="px-3 py-1.5 border border-zinc-600 bg-zinc-900 hover:border-cyan-400 hover:text-cyan-400 transition-all cursor-pointer rounded text-xs font-mono z-50 relative">
                 <TypewriterText text={t.langBtn} speed={30} skip={skipTyping} noCursor/>
               </button>
             </div>
@@ -996,7 +1004,7 @@ export default function Home() {
               <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black via-black/90 to-transparent flex justify-center z-40">
                 <button 
                   onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(3); }}
-                  className="px-10 py-4 bg-amber-500 text-black font-bold font-mono tracking-widest text-sm md:text-lg shadow-[0_0_30px_rgba(245,158,11,0.3)] hover:bg-amber-400 transition-all cursor-pointer rounded-sm hover:scale-105"
+                  className="px-10 py-4 bg-amber-500 text-black font-bold font-mono tracking-widest text-sm md:text-lg shadow-[0_0_30px_rgba(245,158,11,0.3)] hover:bg-amber-400 transition-all cursor-pointer rounded-sm hover:scale-105 z-50 relative"
                 >
                   <TypewriterText text={t.openBoardBtn} speed={15} delay={9500} skip={skipTyping} noCursor />
                 </button>
@@ -1009,8 +1017,8 @@ export default function Home() {
 
         {/* MODAL CHI TIẾT P1 */}
         {selectedEvidence && (
-          <div onClick={(e) => e.stopPropagation()} className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 md:p-8 z-[100] overflow-y-auto">
-            <div className="bg-zinc-950 border border-cyan-400 w-full max-w-2xl max-h-full overflow-y-auto p-6 md:p-8 rounded font-mono shadow-[0_0_40px_rgba(56,189,248,0.2)] relative mt-10 mb-10">
+          <div onClick={(e) => { e.stopPropagation(); setSelectedEvidence(null); }} className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-start justify-center p-4 md:p-8 z-[100] overflow-y-auto cursor-pointer">
+            <div onClick={(e) => e.stopPropagation()} className="bg-zinc-950 border border-cyan-400 w-full max-w-2xl max-h-full overflow-y-auto p-6 md:p-8 rounded font-mono shadow-[0_0_40px_rgba(56,189,248,0.2)] relative mt-10 mb-10 cursor-default">
               <h2 className="text-xl font-bold text-slate-100 mb-6 border-l-4 border-cyan-400 pl-4 [text-shadow:0_0_8px_rgba(34,211,238,0.6)]">
                 <TypewriterText text={selectedEvidence.title} speed={20} />
               </h2>
@@ -1129,7 +1137,7 @@ export default function Home() {
               <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black via-black/90 to-transparent flex justify-center z-40">
                 <button 
                   onClick={(e) => { e.stopPropagation(); setTimeLeft(300); setSkipTyping(false); setStep(11); }}
-                  className="px-10 py-4 bg-amber-500 text-black font-bold font-mono tracking-widest text-sm md:text-lg shadow-[0_0_30px_rgba(245,158,11,0.4)] hover:bg-amber-400 transition-all cursor-pointer rounded-sm hover:scale-105"
+                  className="px-10 py-4 bg-amber-500 text-black font-bold font-mono tracking-widest text-sm md:text-lg shadow-[0_0_30px_rgba(245,158,11,0.4)] hover:bg-amber-400 transition-all cursor-pointer rounded-sm hover:scale-105 z-50 relative"
                 >
                   <TypewriterText text={t.p3OpenTerminal} speed={15} delay={7500} skip={skipTyping} noCursor />
                 </button>
@@ -1142,8 +1150,8 @@ export default function Home() {
 
         {/* MODAL CHI TIẾT P3 */}
         {selectedEvidence && (
-          <div onClick={(e) => e.stopPropagation()} className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-start justify-center p-4 md:p-8 z-[100] overflow-y-auto">
-            <div className="bg-zinc-950 border border-amber-500 w-full max-w-2xl max-h-full overflow-y-auto p-6 md:p-8 rounded font-mono shadow-[0_0_40px_rgba(245,158,11,0.3)] relative mt-10 mb-10">
+          <div onClick={(e) => { e.stopPropagation(); setSelectedEvidence(null); }} className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-start justify-center p-4 md:p-8 z-[100] overflow-y-auto cursor-pointer">
+            <div onClick={(e) => e.stopPropagation()} className="bg-zinc-950 border border-amber-500 w-full max-w-2xl max-h-full overflow-y-auto p-6 md:p-8 rounded font-mono shadow-[0_0_40px_rgba(245,158,11,0.3)] relative mt-10 mb-10 cursor-default">
               <h2 className="text-xl font-bold text-slate-100 mb-6 border-l-4 border-amber-500 pl-4 [text-shadow:0_0_8px_rgba(245,158,11,0.6)]">
                 <TypewriterText text={selectedEvidence.title} speed={20} />
               </h2>
@@ -1269,7 +1277,7 @@ export default function Home() {
               <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black via-black/90 to-transparent flex justify-center z-40">
                 <button 
                   onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(8); }}
-                  className="px-10 py-4 bg-red-600 text-white font-bold font-mono tracking-widest text-sm md:text-lg shadow-[0_0_30px_rgba(239,68,68,0.4)] hover:bg-red-500 transition-all cursor-pointer rounded-sm hover:scale-105"
+                  className="px-10 py-4 bg-red-600 text-white font-bold font-mono tracking-widest text-sm md:text-lg shadow-[0_0_30px_rgba(239,68,68,0.4)] hover:bg-red-500 transition-all cursor-pointer rounded-sm hover:scale-105 z-50 relative"
                 >
                   <TypewriterText text={t.p2OpenTerminal} speed={15} delay={7500} skip={skipTyping} noCursor />
                 </button>
@@ -1282,8 +1290,8 @@ export default function Home() {
 
         {/* MODAL CHI TIẾT P2 */}
         {selectedEvidence && (
-          <div onClick={(e) => e.stopPropagation()} className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-start justify-center p-4 md:p-8 z-[100] overflow-y-auto">
-            <div className="bg-zinc-950 border border-red-500 w-full max-w-2xl max-h-full overflow-y-auto p-6 md:p-8 rounded font-mono shadow-[0_0_40px_rgba(239,68,68,0.3)] relative mt-10 mb-10">
+          <div onClick={(e) => { e.stopPropagation(); setSelectedEvidence(null); }} className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-start justify-center p-4 md:p-8 z-[100] overflow-y-auto cursor-pointer">
+            <div onClick={(e) => e.stopPropagation()} className="bg-zinc-950 border border-red-500 w-full max-w-2xl max-h-full overflow-y-auto p-6 md:p-8 rounded font-mono shadow-[0_0_40px_rgba(239,68,68,0.3)] relative mt-10 mb-10 cursor-default">
               <h2 className="text-xl font-bold text-slate-100 mb-6 border-l-4 border-red-500 pl-4 [text-shadow:0_0_8px_rgba(239,68,68,0.6)]">
                 <TypewriterText text={selectedEvidence.title} speed={20} />
               </h2>
