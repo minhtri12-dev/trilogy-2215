@@ -2,39 +2,52 @@
 
 import { useState, useEffect } from "react";
 
-// --- HOOK: HIỆU ỨNG CHỮ ĐÁNH MÁY ---
-const useTypewriter = (text, speed = 5, delay = 0) => {
+// --- HOOK: HIỆU ỨNG CHỮ ĐÁNH MÁY TERMINAL HIỆN ĐẠI ---
+const useTypewriter = (text, speed = 15, delay = 0, skip = false) => {
   const [displayedText, setDisplayedText] = useState("");
-  const [started, setStarted] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
     if (!text) return;
+    if (skip) {
+      setDisplayedText(text);
+      setIsTyping(false);
+      return;
+    }
+    
     setDisplayedText("");
-    setStarted(false);
-    const timeout = setTimeout(() => setStarted(true), delay);
-    return () => clearTimeout(timeout);
-  }, [text, delay]);
-
-  useEffect(() => {
-    if (!started || !text) return;
+    setIsTyping(true);
     let i = 0;
-    const typingInterval = setInterval(() => {
-      if (i < text.length) {
-        setDisplayedText(text.slice(0, i + 1));
-        i++;
-      } else {
-        clearInterval(typingInterval);
-      }
-    }, speed);
-    return () => clearInterval(typingInterval);
-  }, [text, speed, started]);
+    
+    const timeout = setTimeout(() => {
+      const typingInterval = setInterval(() => {
+        if (i < text.length) {
+          setDisplayedText(text.slice(0, i + 1));
+          i++;
+        } else {
+          clearInterval(typingInterval);
+          setIsTyping(false);
+        }
+      }, speed);
+      return () => clearInterval(typingInterval);
+    }, delay);
 
-  return displayedText;
+    return () => clearTimeout(timeout);
+  }, [text, speed, delay, skip]);
+
+  return { displayedText, isTyping };
 };
 
-const TypewriterText = ({ text, speed = 5, delay = 0, className }) => {
-  const displayed = useTypewriter(text, speed, delay);
-  return <span className={`pointer-events-none ${className || ""}`}>{displayed}</span>;
+const TypewriterText = ({ text, speed = 15, delay = 0, className, skip = false, noCursor = false }) => {
+  const { displayedText, isTyping } = useTypewriter(text, speed, delay, skip);
+  return (
+    <span className={`${className || ""} [text-shadow:0_0_8px_currentColor] transition-all`}>
+      {displayedText}
+      {!noCursor && (
+        <span className={`inline-block w-2 h-4 ml-1 bg-current align-middle ${isTyping ? "animate-pulse" : "animate-pulse opacity-40"}`}></span>
+      )}
+    </span>
+  );
 };
 
 export default function Home() {
@@ -46,6 +59,9 @@ export default function Home() {
   const [step, setStep] = useState(0); 
   const [selectedEvidence, setSelectedEvidence] = useState(null);
   
+  // UX State
+  const [skipTyping, setSkipTyping] = useState(false); // Cơ chế Click-to-Skip
+
   // Audio State
   const [bgm, setBgm] = useState(null);
   const [isMuted, setIsMuted] = useState(true);
@@ -66,6 +82,11 @@ export default function Home() {
   const [matrixError, setMatrixError] = useState("");
   const [strikesP3, setStrikesP3] = useState(3);
   const [timeLeft, setTimeLeft] = useState(300); // 5 phút = 300 giây
+
+  // Reset tính năng Skip mỗi khi chuyển màn hình
+  useEffect(() => {
+    setSkipTyping(false);
+  }, [step, selectedEvidence]);
 
   // --- LOGIC ÂM THANH (SSR SAFE) ---
   useEffect(() => {
@@ -480,8 +501,8 @@ export default function Home() {
   const TopStatusBar = () => (
     <div className="flex justify-between items-center w-full mb-8 pb-4 border-b border-zinc-800 relative z-50">
       <div className="flex items-center gap-4">
-        <span className="text-xs font-mono text-amber-500 tracking-widest animate-pulse">[SECURE_BOOT_v4.0_FINAL]</span>
-        <button onClick={() => setIsMuted(!isMuted)} className="text-xs font-mono text-zinc-500 hover:text-cyan-400 transition-all cursor-pointer border border-zinc-700 px-2 py-0.5 rounded">
+        <span className="text-xs font-mono text-amber-500 tracking-widest animate-pulse">[SECURE_BOOT_v5.0_MASTERPIECE]</span>
+        <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }} className="text-xs font-mono text-zinc-500 hover:text-cyan-400 transition-all cursor-pointer border border-zinc-700 px-2 py-0.5 rounded">
           {lang === "vi" ? `[ ÂM THANH: ${isMuted ? "TẮT" : "BẬT"} ]` : `[ SOUND: ${isMuted ? "OFF" : "ON"} ]`}
         </button>
       </div>
@@ -496,7 +517,7 @@ export default function Home() {
   const CopyrightFooter = () => (
     <div className="w-full mt-10 pt-6 border-t border-zinc-800/50 text-center z-20 relative">
       <span className="text-xs font-mono text-zinc-600 tracking-widest uppercase">
-        <TypewriterText text={t.footer} speed={20} delay={1000} />
+        <TypewriterText text={t.footer} speed={20} delay={1000} skip={skipTyping} noCursor />
       </span>
     </div>
   );
@@ -519,7 +540,10 @@ export default function Home() {
   // ==========================================
   if (step === 0 || step === 1) {
     return (
-      <main className={`h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-slate-100`}>
+      <main 
+        onClick={() => setSkipTyping(true)}
+        className={`h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-slate-100`}
+      >
         <div className="fixed inset-0 bg-black/60 z-0 pointer-events-none"></div>
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
         <style dangerouslySetInnerHTML={{__html: `.crt-turn-on { animation: crtOn 1s ease-out forwards; } @keyframes crtOn { 0% { transform: scale(1, 0.01); opacity: 0; filter: brightness(10); } 40% { transform: scale(1, 0.01); opacity: 1; filter: brightness(5); } 100% { transform: scale(1, 1); opacity: 1; filter: brightness(1); } }`}} />
@@ -527,44 +551,44 @@ export default function Home() {
           <div className="crt-turn-on w-full max-w-2xl mx-auto my-auto bg-zinc-950/90 border border-cyan-900/50 p-6 md:p-8 rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.9)] backdrop-blur-md">
             <div className="flex justify-between items-center w-full mb-8 pb-4 border-b border-zinc-800">
               <div className="flex items-center gap-4">
-                <span className="text-xs font-mono text-amber-500 tracking-widest animate-pulse">[SECURE_BOOT_v4.0_FINAL]</span>
-                <button onClick={() => setIsMuted(!isMuted)} className="text-xs font-mono text-zinc-500 hover:text-cyan-400 transition-all cursor-pointer border border-zinc-700 px-2 py-0.5 rounded">
+                <span className="text-xs font-mono text-amber-500 tracking-widest animate-pulse">[SECURE_BOOT_v5.0]</span>
+                <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }} className="text-xs font-mono text-zinc-500 hover:text-cyan-400 transition-all cursor-pointer border border-zinc-700 px-2 py-0.5 rounded">
                   {lang === "vi" ? `[ ÂM THANH: ${isMuted ? "TẮT" : "BẬT"} ]` : `[ SOUND: ${isMuted ? "OFF" : "ON"} ]`}
                 </button>
               </div>
-              <button onClick={() => setLang(lang === "vi" ? "en" : "vi")} className="px-3 py-1.5 border border-zinc-600 bg-zinc-900 hover:border-cyan-400 hover:text-cyan-400 transition-all cursor-pointer rounded text-xs font-mono">
-                <TypewriterText text={t.langBtn} speed={30}/>
+              <button onClick={(e) => { e.stopPropagation(); setLang(lang === "vi" ? "en" : "vi"); }} className="px-3 py-1.5 border border-zinc-600 bg-zinc-900 hover:border-cyan-400 hover:text-cyan-400 transition-all cursor-pointer rounded text-xs font-mono z-50">
+                <TypewriterText text={t.langBtn} speed={30} skip={skipTyping} noCursor/>
               </button>
             </div>
             {step === 0 ? (
               <>
-                <h1 className="text-xl md:text-2xl font-bold font-mono text-amber-500 mb-4 border-b border-zinc-800 pb-2"><TypewriterText text={t.profTitle} delay={200} /></h1>
+                <h1 className="text-xl md:text-2xl font-bold font-mono text-amber-500 mb-4 border-b border-zinc-800 pb-2"><TypewriterText text={t.profTitle} delay={200} skip={skipTyping} /></h1>
                 <div className="font-mono text-sm text-cyan-400 space-y-2 mb-8">
-                  <p><TypewriterText text={t.profLine1} delay={1000} /></p>
-                  <p><TypewriterText text={t.profLine2} delay={1800} /></p>
-                  <p><TypewriterText text={t.profLine3} delay={2800} /></p>
+                  <p><TypewriterText text={t.profLine1} delay={1000} skip={skipTyping} /></p>
+                  <p><TypewriterText text={t.profLine2} delay={1800} skip={skipTyping} /></p>
+                  <p><TypewriterText text={t.profLine3} delay={2800} skip={skipTyping} /></p>
                 </div>
-                <h2 className="text-md font-bold font-mono text-amber-500 mb-4"><TypewriterText text={t.profHeader} delay={3500} /></h2>
+                <h2 className="text-md font-bold font-mono text-amber-500 mb-4"><TypewriterText text={t.profHeader} delay={3500} skip={skipTyping} /></h2>
                 <div className="font-mono text-sm text-zinc-300 space-y-4 mb-10 leading-relaxed">
-                  <p><TypewriterText text={t.profP1} speed={10} delay={4500} /></p>
-                  <p><TypewriterText text={t.profP2} speed={10} delay={6500} /></p>
-                  <p><TypewriterText text={t.profP3} speed={10} delay={8500} /></p>
+                  <p><TypewriterText text={t.profP1} speed={10} delay={4500} skip={skipTyping} /></p>
+                  <p><TypewriterText text={t.profP2} speed={10} delay={6500} skip={skipTyping} /></p>
+                  <p><TypewriterText text={t.profP3} speed={10} delay={8500} skip={skipTyping} /></p>
                 </div>
-                <button type="button" onClick={() => setStep(1)} className="w-full py-4 bg-cyan-500/10 border border-cyan-400 text-cyan-400 font-mono font-bold tracking-widest hover:bg-cyan-400 hover:text-black transition-all cursor-pointer rounded">
-                  <TypewriterText text={t.profBtn} delay={11000} />
+                <button type="button" onClick={(e) => { e.stopPropagation(); setStep(1); }} className="w-full py-4 bg-cyan-500/10 border border-cyan-400 text-cyan-400 font-mono font-bold tracking-widest hover:bg-cyan-400 hover:text-black transition-all cursor-pointer rounded shadow-[0_0_15px_rgba(34,211,238,0.3)] z-50 relative">
+                  <TypewriterText text={t.profBtn} delay={11000} skip={skipTyping} noCursor />
                 </button>
               </>
             ) : (
               <>
-                <h1 className="text-xl md:text-2xl font-bold font-mono text-cyan-400 mb-2"><TypewriterText text={t.introTitle} delay={200} /></h1>
-                <p className="text-xs text-zinc-400 font-mono mb-6 border-b border-zinc-800 pb-4"><TypewriterText text={t.introSub} delay={800} /></p>
+                <h1 className="text-xl md:text-2xl font-bold font-mono text-cyan-400 mb-2"><TypewriterText text={t.introTitle} delay={200} skip={skipTyping} /></h1>
+                <p className="text-xs text-zinc-400 font-mono mb-6 border-b border-zinc-800 pb-4"><TypewriterText text={t.introSub} delay={800} skip={skipTyping} /></p>
                 <div className="bg-black/60 p-4 rounded border border-zinc-800 font-mono text-xs text-zinc-300 space-y-3 mb-8">
                   {t.bootLogs.map((log, idx) => (
-                    <div key={idx} className="flex items-start gap-2"><span className="text-cyan-400 mt-1">&gt;</span><p><TypewriterText text={log} delay={1200 + (idx * 500)} /></p></div>
+                    <div key={idx} className="flex items-start gap-2"><span className="text-cyan-400 mt-1">&gt;</span><p><TypewriterText text={log} delay={1200 + (idx * 500)} skip={skipTyping} /></p></div>
                   ))}
                 </div>
-                <button type="button" onClick={() => setStep(2)} className="w-full py-4 bg-cyan-500/10 border border-cyan-400 text-cyan-400 font-mono font-bold hover:bg-cyan-400 hover:text-black transition-all cursor-pointer rounded">
-                  <TypewriterText text={t.startButton} delay={4000} />
+                <button type="button" onClick={(e) => { e.stopPropagation(); setStep(2); }} className="w-full py-4 bg-cyan-500/10 border border-cyan-400 text-cyan-400 font-mono font-bold hover:bg-cyan-400 hover:text-black transition-all cursor-pointer rounded shadow-[0_0_15px_rgba(34,211,238,0.3)] z-50 relative">
+                  <TypewriterText text={t.startButton} delay={4000} skip={skipTyping} noCursor />
                 </button>
               </>
             )}
@@ -584,9 +608,9 @@ export default function Home() {
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
         <div className="relative z-20 min-h-full flex flex-col p-4 md:p-8">
           <div className="w-full max-w-lg mx-auto my-auto text-center">
-            <h1 className="text-4xl font-bold text-red-600 font-mono mb-6 animate-pulse">{t.gameOverTitle}</h1>
+            <h1 className="text-4xl font-bold text-red-600 font-mono mb-6 animate-pulse [text-shadow:0_0_15px_rgba(220,38,38,0.8)]">{t.gameOverTitle}</h1>
             <p className="text-zinc-400 font-mono mb-8 leading-relaxed"><TypewriterText text={t.gameOverDesc} speed={20} /></p>
-            <button onClick={() => window.location.reload()} className="px-6 py-3 border border-red-600 text-red-500 font-mono hover:bg-red-900 transition-all rounded cursor-pointer"><TypewriterText text={t.rebootBtn} delay={1000}/></button>
+            <button onClick={() => window.location.reload()} className="px-6 py-3 border border-red-600 text-red-500 font-mono hover:bg-red-900 transition-all rounded cursor-pointer"><TypewriterText text={t.rebootBtn} delay={1000} noCursor /></button>
           </div>
           <CopyrightFooter />
         </div>
@@ -603,7 +627,7 @@ export default function Home() {
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
         <div className="relative z-20 min-h-full flex flex-col p-4 md:p-8">
           <div className="w-full max-w-lg mx-auto my-auto text-center">
-            <h1 className="text-4xl font-bold text-red-600 font-mono mb-6 animate-pulse">
+            <h1 className="text-4xl font-bold text-red-600 font-mono mb-6 animate-pulse [text-shadow:0_0_15px_rgba(220,38,38,0.8)]">
               {lang === "vi" ? "HẾT MẠNG - MẬT MÃ BỊ KHÓA" : "OUT OF STRIKES - CIPHER LOCKED"}
             </h1>
             <p className="text-zinc-400 font-mono mb-8 leading-relaxed">
@@ -628,7 +652,7 @@ export default function Home() {
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
         <div className="relative z-20 min-h-full flex flex-col p-4 md:p-8">
           <div className="w-full max-w-lg mx-auto my-auto text-center">
-            <h1 className="text-4xl font-bold text-red-600 font-mono mb-6 animate-pulse">
+            <h1 className="text-4xl font-bold text-red-600 font-mono mb-6 animate-pulse [text-shadow:0_0_15px_rgba(220,38,38,0.8)]">
               {lang === "vi" ? "HỆ THỐNG PHÁT NỔ - THẤT BẠI" : "SYSTEM DETONATED - MISSION FAILED"}
             </h1>
             <p className="text-zinc-400 font-mono mb-8 leading-relaxed">
@@ -649,26 +673,26 @@ export default function Home() {
   // ==========================================
   if (step === 6) {
     return (
-      <main className="h-screen w-full overflow-y-auto overflow-x-hidden relative bg-black text-slate-100">
+      <main onClick={() => setSkipTyping(true)} className="h-screen w-full overflow-y-auto overflow-x-hidden relative bg-black text-slate-100">
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
         <style dangerouslySetInnerHTML={{__html: `.delayed-fade { animation: fadeIn 2s ease-in 7.5s forwards; opacity: 0; } @keyframes fadeIn { to { opacity: 1; } }`}} />
 
         <div className="relative z-20 min-h-full flex flex-col p-4 md:p-12">
           <div className="max-w-4xl mx-auto my-auto text-center flex flex-col items-center w-full">
-            <h1 className="text-3xl font-bold text-cyan-400 font-mono mb-6">
-              <TypewriterText text={t.victoryTitle} speed={20} />
+            <h1 className="text-3xl font-bold text-cyan-400 font-mono mb-6 [text-shadow:0_0_10px_rgba(34,211,238,0.8)]">
+              <TypewriterText text={t.victoryTitle} speed={20} skip={skipTyping} />
             </h1>
-            <div className="text-zinc-300 font-mono mb-10 leading-loose bg-zinc-900/50 p-6 md:p-10 border border-cyan-900 rounded text-left whitespace-pre-wrap shadow-[0_0_30px_rgba(56,189,248,0.1)] w-full h-auto">
-              <TypewriterText text={t.victoryDesc} speed={10} delay={500} />
+            <div className="text-zinc-300 font-mono mb-10 leading-loose bg-zinc-900/50 p-6 md:p-10 border border-cyan-900 rounded text-left whitespace-pre-wrap shadow-[0_0_30px_rgba(56,189,248,0.1)] w-full h-auto relative z-10">
+              <TypewriterText text={t.victoryDesc} speed={10} delay={500} skip={skipTyping} />
             </div>
-            <div className="delayed-fade mb-10 w-full flex justify-center">
+            <div className={`${skipTyping ? 'opacity-100' : 'delayed-fade'} mb-10 w-full flex justify-center`}>
                <img src="/end1.png" alt="Zodiac Symbol" className="w-40 md:w-56 h-auto object-contain drop-shadow-[0_0_25px_rgba(220,38,38,0.7)]" />
             </div>
             <button 
-              onClick={() => setStep(7)}
-              className="px-8 py-4 bg-amber-500 text-black font-bold font-mono tracking-widest hover:bg-amber-400 transition-all cursor-pointer shadow-[0_0_20px_rgba(245,158,11,0.4)] rounded animate-pulse"
+              onClick={(e) => { e.stopPropagation(); setStep(7); }}
+              className="px-8 py-4 bg-amber-500 text-black font-bold font-mono tracking-widest hover:bg-amber-400 transition-all cursor-pointer shadow-[0_0_20px_rgba(245,158,11,0.4)] rounded animate-pulse z-50 relative"
             >
-              <TypewriterText text={t.unlockBtn} delay={8500} />
+              <TypewriterText text={t.unlockBtn} delay={skipTyping ? 0 : 8500} skip={skipTyping} noCursor />
             </button>
           </div>
           <CopyrightFooter />
@@ -682,23 +706,23 @@ export default function Home() {
   // ==========================================
   if (step === 9) {
     return (
-      <main className="h-screen w-full overflow-y-auto overflow-x-hidden relative bg-[url('/end2.png')] bg-cover bg-center bg-fixed text-slate-100">
+      <main onClick={() => setSkipTyping(true)} className="h-screen w-full overflow-y-auto overflow-x-hidden relative bg-[url('/end2.png')] bg-cover bg-center bg-fixed text-slate-100">
         <div className="fixed inset-0 bg-black/75 z-0 pointer-events-none"></div>
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
         
         <div className="relative z-20 min-h-full flex flex-col p-4 md:p-12">
           <div className="max-w-3xl mx-auto my-auto text-center flex flex-col items-center w-full">
-            <h1 className="text-3xl font-bold text-cyan-400 font-mono mb-6">
-              <TypewriterText text={t.p2VictoryTitle} speed={20} />
+            <h1 className="text-3xl font-bold text-cyan-400 font-mono mb-6 [text-shadow:0_0_10px_rgba(34,211,238,0.8)]">
+              <TypewriterText text={t.p2VictoryTitle} speed={20} skip={skipTyping} />
             </h1>
-            <div className="text-zinc-300 font-mono mb-10 leading-loose bg-zinc-950/80 p-6 md:p-10 border border-cyan-900 rounded text-center whitespace-pre-wrap shadow-[0_0_40px_rgba(56,189,248,0.2)] backdrop-blur-md w-full">
-              <TypewriterText text={t.p2VictoryDesc} speed={10} delay={500} />
+            <div className="text-zinc-300 font-mono mb-10 leading-loose bg-zinc-950/80 p-6 md:p-10 border border-cyan-900 rounded text-center whitespace-pre-wrap shadow-[0_0_40px_rgba(56,189,248,0.2)] backdrop-blur-md w-full relative z-10">
+              <TypewriterText text={t.p2VictoryDesc} speed={10} delay={500} skip={skipTyping} />
             </div>
             <button 
-              onClick={() => { setTimeLeft(300); setStep(10); }}
-              className="px-8 py-4 bg-cyan-400 text-black font-bold font-mono tracking-widest hover:bg-cyan-300 transition-all cursor-pointer rounded shadow-[0_0_20px_rgba(56,189,248,0.5)]"
+              onClick={(e) => { e.stopPropagation(); setTimeLeft(300); setStep(10); }}
+              className="px-8 py-4 bg-cyan-400 text-black font-bold font-mono tracking-widest hover:bg-cyan-300 transition-all cursor-pointer rounded shadow-[0_0_20px_rgba(56,189,248,0.5)] z-50 relative"
             >
-              <TypewriterText text={t.p2FinalBtn} delay={5000} />
+              <TypewriterText text={t.p2FinalBtn} delay={skipTyping ? 0 : 5000} skip={skipTyping} noCursor />
             </button>
           </div>
           <CopyrightFooter />
@@ -712,33 +736,33 @@ export default function Home() {
   // ==========================================
   if (step === 12) {
     return (
-      <main className="h-screen w-full overflow-y-auto overflow-x-hidden relative bg-[url('/end3.png')] bg-cover bg-center bg-fixed text-slate-100">
+      <main onClick={() => setSkipTyping(true)} className="h-screen w-full overflow-y-auto overflow-x-hidden relative bg-[url('/end3.png')] bg-cover bg-center bg-fixed text-slate-100">
         <div className="fixed inset-0 bg-black/80 z-0 pointer-events-none"></div>
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
         <style dangerouslySetInnerHTML={{__html: `.delayed-fade-btns { animation: fadeIn 2s ease-in 10.5s forwards; opacity: 0; } @keyframes fadeIn { to { opacity: 1; } }`}} />
         
         <div className="relative z-20 min-h-full flex flex-col p-4 md:p-12">
           <div className="max-w-4xl mx-auto my-auto text-center flex flex-col items-center w-full">
-            <h1 className="text-3xl md:text-4xl font-bold text-red-500 font-mono mb-6 animate-pulse">
-              <TypewriterText text={t.season2Title} speed={20} />
+            <h1 className="text-3xl md:text-4xl font-bold text-red-500 font-mono mb-6 animate-pulse [text-shadow:0_0_15px_rgba(220,38,38,0.8)]">
+              <TypewriterText text={t.season2Title} speed={20} skip={skipTyping} />
             </h1>
-            <div className="text-zinc-300 font-mono mb-10 leading-loose bg-zinc-950/90 p-6 md:p-10 border border-red-900 rounded text-left whitespace-pre-wrap shadow-[0_0_50px_rgba(239,68,68,0.3)] backdrop-blur-md w-full">
-              <TypewriterText text={t.season2Desc} speed={10} delay={500} />
+            <div className="text-zinc-300 font-mono mb-10 leading-loose bg-zinc-950/90 p-6 md:p-10 border border-red-900 rounded text-left whitespace-pre-wrap shadow-[0_0_50px_rgba(239,68,68,0.3)] backdrop-blur-md w-full relative z-10">
+              <TypewriterText text={t.season2Desc} speed={10} delay={500} skip={skipTyping} />
             </div>
-            <div className="text-amber-500 font-mono tracking-widest text-sm md:text-base animate-bounce">
-              <TypewriterText text={t.season2Footer} speed={25} delay={9000} />
+            <div className="text-amber-500 font-mono tracking-widest text-sm md:text-base animate-bounce [text-shadow:0_0_10px_rgba(245,158,11,0.8)]">
+              <TypewriterText text={t.season2Footer} speed={25} delay={skipTyping ? 0 : 9000} skip={skipTyping} />
             </div>
 
             {/* NÚT CHƠI LẠI HOẶC KẾT THÚC HỆ THỐNG */}
-            <div className="delayed-fade-btns flex flex-col md:flex-row justify-center gap-4 md:gap-8 mt-12 w-full">
+            <div className={`${skipTyping ? 'opacity-100' : 'delayed-fade-btns'} flex flex-col md:flex-row justify-center gap-4 md:gap-8 mt-12 w-full z-50 relative`}>
               <button 
-                onClick={() => window.location.reload()} 
+                onClick={(e) => { e.stopPropagation(); window.location.reload(); }} 
                 className="px-6 py-4 bg-amber-500/20 border border-amber-500 text-amber-400 font-bold font-mono tracking-widest hover:bg-amber-500 hover:text-black transition-all cursor-pointer rounded"
               >
                 {lang === "vi" ? "[ CHƠI LẠI TỪ ĐẦU ]" : "[ REPLAY MISSION ]"}
               </button>
               <button 
-                onClick={() => setStep(15)} 
+                onClick={(e) => { e.stopPropagation(); setStep(15); }} 
                 className="px-6 py-4 bg-red-900/40 border border-red-600 text-red-500 font-bold font-mono tracking-widest hover:bg-red-600 hover:text-white transition-all cursor-pointer rounded"
               >
                 {lang === "vi" ? "[ KẾT THÚC HỆ THỐNG ]" : "[ SYSTEM SHUTDOWN ]"}
@@ -757,7 +781,10 @@ export default function Home() {
   // ==========================================
   if (step === 10 || step === 11) {
     return (
-      <main className={`h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-slate-100 transition-all duration-1000 flex flex-col`}>
+      <main 
+        onClick={() => setSkipTyping(true)}
+        className={`h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-slate-100 transition-all duration-1000 flex flex-col`}
+      >
         <div className="fixed inset-0 bg-black/80 z-0 pointer-events-none"></div>
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
 
@@ -766,24 +793,24 @@ export default function Home() {
           
           <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 border-b border-zinc-800 pb-6">
             <div className="mb-4 md:mb-0">
-              <span className="text-xs tracking-widest text-amber-500 font-mono"><TypewriterText text={t.p3Subtitle} speed={20} /></span>
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold font-mono tracking-wider mt-2 text-amber-500 break-words">
-                <TypewriterText text={t.p3Title} speed={25} delay={300}/>
+              <span className="text-xs tracking-widest text-amber-500 font-mono"><TypewriterText text={t.p3Subtitle} speed={20} skip={skipTyping} /></span>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold font-mono tracking-wider mt-2 text-amber-500 break-words [text-shadow:0_0_10px_rgba(245,158,11,0.8)]">
+                <TypewriterText text={t.p3Title} speed={25} delay={300} skip={skipTyping} />
               </h1>
             </div>
-            <div className="flex gap-4">
-               <button onClick={() => setStep(0)} className="px-4 py-2 border border-zinc-700 bg-zinc-900 hover:border-red-500 hover:text-red-400 text-xs font-mono transition-all rounded cursor-pointer">{t.exitBtn}</button>
-               <button onClick={() => setLang(lang === "vi" ? "en" : "vi")} className="px-4 py-2 border border-zinc-700 bg-zinc-900 hover:border-cyan-400 hover:text-cyan-400 text-xs font-mono transition-all rounded cursor-pointer">{t.langBtn}</button>
+            <div className="flex gap-4 z-50">
+               <button onClick={(e) => { e.stopPropagation(); setStep(0); }} className="px-4 py-2 border border-zinc-700 bg-zinc-900 hover:border-red-500 hover:text-red-400 text-xs font-mono transition-all rounded cursor-pointer">{t.exitBtn}</button>
+               <button onClick={(e) => { e.stopPropagation(); setLang(lang === "vi" ? "en" : "vi"); }} className="px-4 py-2 border border-zinc-700 bg-zinc-900 hover:border-cyan-400 hover:text-cyan-400 text-xs font-mono transition-all rounded cursor-pointer">{t.langBtn}</button>
             </div>
           </header>
 
           {step === 11 ? (
             /* TERMINAL PHẦN 3: MATRIX LOCK VỚI BOM HẸN GIỜ 05:00 */
-            <div className="max-w-3xl mx-auto mt-6 bg-zinc-950/95 border border-amber-500 p-6 md:p-10 rounded shadow-[0_0_50px_rgba(245,158,11,0.2)] backdrop-blur-md mb-16 animate-fade-in flex flex-col w-full">
+            <div className="max-w-3xl mx-auto mt-6 bg-zinc-950/95 border border-amber-500 p-6 md:p-10 rounded shadow-[0_0_50px_rgba(245,158,11,0.2)] backdrop-blur-md mb-16 animate-fade-in flex flex-col w-full relative z-10">
               <div className="flex flex-col md:flex-row justify-between items-center mb-6">
-                <h2 className="text-xl font-bold font-mono text-amber-500 mb-4 md:mb-0"><TypewriterText text={t.p3TerminalTitle} speed={20} /></h2>
+                <h2 className="text-xl font-bold font-mono text-amber-500 mb-4 md:mb-0 [text-shadow:0_0_8px_rgba(245,158,11,0.8)]"><TypewriterText text={t.p3TerminalTitle} speed={20} skip={skipTyping} /></h2>
                 {/* ĐỒNG HỒ ĐẾM NGƯỢC */}
-                <div className={`text-4xl font-bold font-mono bg-black px-4 py-2 rounded border ${timeLeft <= 60 ? 'text-red-500 border-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.6)]' : 'text-amber-500 border-amber-500'}`}>
+                <div className={`text-4xl font-bold font-mono bg-black px-4 py-2 rounded border ${timeLeft <= 60 ? 'text-red-500 border-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.6)]' : 'text-amber-500 border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]'}`}>
                   [ {formatTime(timeLeft)} ]
                 </div>
               </div>
@@ -795,15 +822,16 @@ export default function Home() {
               )}
 
               <div className="font-mono text-zinc-300 leading-relaxed mb-8 whitespace-pre-wrap bg-black/70 p-6 rounded border border-zinc-900 text-center text-lg md:text-xl tracking-widest">
-                <TypewriterText text={t.p3TerminalDesc} speed={15} delay={300} />
+                <TypewriterText text={t.p3TerminalDesc} speed={15} delay={300} skip={skipTyping} />
               </div>
 
               <form onSubmit={handleMatrixSubmit} className="flex flex-col gap-4 mt-auto">
                 <input 
                   type="text" autoFocus value={matrixAnswer} onChange={(e) => setMatrixAnswer(e.target.value)} placeholder={t.p3Placeholder}
-                  className="w-full bg-black border-2 border-zinc-700 focus:border-amber-500 text-amber-500 font-mono p-4 rounded outline-none transition-all text-2xl tracking-widest text-center"
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full bg-black border-2 border-zinc-700 focus:border-amber-500 text-amber-500 font-mono p-4 rounded outline-none transition-all text-2xl tracking-widest text-center shadow-inner"
                 />
-                <button type="submit" className="self-end px-8 py-4 bg-amber-500 text-black font-bold font-mono hover:bg-amber-400 transition-all cursor-pointer rounded w-full tracking-widest">
+                <button type="submit" onClick={(e) => e.stopPropagation()} className="self-end px-8 py-4 bg-amber-500 text-black font-bold font-mono hover:bg-amber-400 transition-all cursor-pointer rounded w-full tracking-widest shadow-[0_0_15px_rgba(245,158,11,0.5)]">
                   {t.p3Submit}
                 </button>
               </form>
@@ -811,32 +839,32 @@ export default function Home() {
           ) : (
             /* WORKSPACE PHẦN 3 */
             <>
-              <div className="mb-10 p-6 bg-zinc-950/90 border border-amber-900/60 rounded flex flex-col">
-                <h2 className="text-md font-bold font-mono text-amber-500 mb-4 border-b border-zinc-800 pb-2">
-                  <TypewriterText text={t.p3BriefingTitle} speed={20} delay={500} />
+              <div className="mb-10 p-6 bg-zinc-950/90 border border-amber-900/60 rounded flex flex-col relative z-10">
+                <h2 className="text-md font-bold font-mono text-amber-500 mb-4 border-b border-zinc-800 pb-2 [text-shadow:0_0_8px_rgba(245,158,11,0.8)]">
+                  <TypewriterText text={t.p3BriefingTitle} speed={20} delay={500} skip={skipTyping} />
                 </h2>
                 <div className="font-mono text-sm text-zinc-300 space-y-3 whitespace-pre-wrap flex-grow">
                   {t.p3BriefingLines.map((line, idx) => (
-                    <p key={idx}><TypewriterText text={line} speed={10} delay={1000 + (idx * 1200)} /></p>
+                    <p key={idx}><TypewriterText text={line} speed={10} delay={1000 + (idx * 1200)} skip={skipTyping} /></p>
                   ))}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-24">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-24 relative z-10">
                 {t.p3Cards.map((card, index) => {
                   const baseDelay = 4500 + (index * 600);
                   return (
                     <div 
                       key={card.id} 
-                      onClick={() => setSelectedEvidence(card)}
-                      className="p-6 bg-zinc-950/90 border border-zinc-700 rounded shadow-2xl relative backdrop-blur-md z-30 flex flex-col hover:border-amber-500 transition-all hover:-translate-y-1 cursor-pointer"
+                      onClick={(e) => { e.stopPropagation(); setSelectedEvidence(card); }}
+                      className="p-6 bg-zinc-950/90 border border-zinc-700 rounded shadow-[0_0_15px_rgba(0,0,0,0.8)] relative backdrop-blur-md z-30 flex flex-col hover:border-amber-500 transition-all hover:-translate-y-1 cursor-pointer"
                     >
                       <div className="flex justify-between items-start mb-4 border-b border-zinc-800 pb-2">
-                        <span className="text-xs font-mono font-bold text-amber-500"><TypewriterText text={card.title} speed={15} delay={baseDelay} /></span>
-                        <span className="text-xs font-mono text-zinc-500"><TypewriterText text={card.tag} speed={15} delay={baseDelay} /></span>
+                        <span className="text-xs font-mono font-bold text-amber-500 [text-shadow:0_0_5px_rgba(245,158,11,0.5)]"><TypewriterText text={card.title} speed={15} delay={baseDelay} skip={skipTyping} /></span>
+                        <span className="text-xs font-mono text-zinc-500"><TypewriterText text={card.tag} speed={15} delay={baseDelay} skip={skipTyping} /></span>
                       </div>
                       <div className="text-zinc-300 text-sm leading-relaxed flex-grow mb-4">
-                        <TypewriterText text={card.desc} speed={10} delay={baseDelay + 300} />
+                        <TypewriterText text={card.desc} speed={10} delay={baseDelay + 300} skip={skipTyping} />
                       </div>
                       <div className="text-xs text-amber-400 font-mono mt-auto">{lang === "vi" ? "[ Xem chi tiết -> ]" : "[ View detail -> ]"}</div>
                     </div>
@@ -846,10 +874,10 @@ export default function Home() {
 
               <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black via-black/90 to-transparent flex justify-center z-40">
                 <button 
-                  onClick={() => { setStep(11); }}
+                  onClick={(e) => { e.stopPropagation(); setTimeLeft(300); setStep(11); }}
                   className="px-10 py-4 bg-amber-500 text-black font-bold font-mono tracking-widest text-sm md:text-lg shadow-[0_0_30px_rgba(245,158,11,0.4)] hover:bg-amber-400 transition-all cursor-pointer rounded-sm hover:scale-105"
                 >
-                  <TypewriterText text={t.p3OpenTerminal} speed={15} delay={7500} />
+                  <TypewriterText text={t.p3OpenTerminal} speed={15} delay={7500} skip={skipTyping} noCursor />
                 </button>
               </div>
             </>
@@ -860,9 +888,9 @@ export default function Home() {
 
         {/* MODAL CHI TIẾT P3 */}
         {selectedEvidence && (
-          <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-start justify-center p-4 md:p-8 z-[100] overflow-y-auto">
+          <div onClick={(e) => e.stopPropagation()} className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-start justify-center p-4 md:p-8 z-[100] overflow-y-auto">
             <div className="bg-zinc-950 border border-amber-500 w-full max-w-2xl max-h-full overflow-y-auto p-6 md:p-8 rounded font-mono shadow-[0_0_40px_rgba(245,158,11,0.3)] relative mt-10 mb-10">
-              <h2 className="text-xl font-bold text-slate-100 mb-6 border-l-4 border-amber-500 pl-4">
+              <h2 className="text-xl font-bold text-slate-100 mb-6 border-l-4 border-amber-500 pl-4 [text-shadow:0_0_8px_rgba(245,158,11,0.6)]">
                 <TypewriterText text={selectedEvidence.title} speed={20} />
               </h2>
               <div className="text-zinc-300 text-sm leading-loose mb-8 bg-black/60 p-4 md:p-6 rounded border border-zinc-800 whitespace-pre-wrap">
@@ -885,7 +913,10 @@ export default function Home() {
   // ==========================================
   if (step === 7 || step === 8) {
     return (
-      <main className={`h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-slate-100 transition-all duration-1000 flex flex-col`}>
+      <main 
+        onClick={() => setSkipTyping(true)}
+        className={`h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-slate-100 transition-all duration-1000 flex flex-col`}
+      >
         <div className="fixed inset-0 bg-black/80 z-0 pointer-events-none"></div>
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
 
@@ -894,21 +925,21 @@ export default function Home() {
           
           <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 border-b border-zinc-800 pb-6">
             <div className="mb-4 md:mb-0">
-              <span className="text-xs tracking-widest text-red-500 font-mono"><TypewriterText text={t.p2Subtitle} speed={20} /></span>
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold font-mono tracking-wider mt-2 text-red-500 break-words">
-                <TypewriterText text={t.p2Title} speed={25} delay={300}/>
+              <span className="text-xs tracking-widest text-red-500 font-mono"><TypewriterText text={t.p2Subtitle} speed={20} skip={skipTyping} /></span>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold font-mono tracking-wider mt-2 text-red-500 break-words [text-shadow:0_0_10px_rgba(239,68,68,0.8)]">
+                <TypewriterText text={t.p2Title} speed={25} delay={300} skip={skipTyping} />
               </h1>
             </div>
-            <div className="flex gap-4">
-               <button onClick={() => setStep(0)} className="px-4 py-2 border border-zinc-700 bg-zinc-900 hover:border-red-500 hover:text-red-400 text-xs font-mono transition-all rounded cursor-pointer">{t.exitBtn}</button>
-               <button onClick={() => setLang(lang === "vi" ? "en" : "vi")} className="px-4 py-2 border border-zinc-700 bg-zinc-900 hover:border-cyan-400 hover:text-cyan-400 text-xs font-mono transition-all rounded cursor-pointer">{t.langBtn}</button>
+            <div className="flex gap-4 z-50">
+               <button onClick={(e) => { e.stopPropagation(); setStep(0); }} className="px-4 py-2 border border-zinc-700 bg-zinc-900 hover:border-red-500 hover:text-red-400 text-xs font-mono transition-all rounded cursor-pointer">{t.exitBtn}</button>
+               <button onClick={(e) => { e.stopPropagation(); setLang(lang === "vi" ? "en" : "vi"); }} className="px-4 py-2 border border-zinc-700 bg-zinc-900 hover:border-cyan-400 hover:text-cyan-400 text-xs font-mono transition-all rounded cursor-pointer">{t.langBtn}</button>
             </div>
           </header>
 
           {step === 8 ? (
             /* TERMINAL GIẢI MÃ CAESAR PHẦN 2 */
-            <div className="max-w-4xl mx-auto mt-6 bg-zinc-950/95 border border-red-500 p-6 md:p-10 rounded shadow-[0_0_50px_rgba(239,68,68,0.2)] backdrop-blur-md mb-16 animate-fade-in flex flex-col w-full">
-              <h2 className="text-xl font-bold font-mono text-red-500 mb-6"><TypewriterText text={t.p2TerminalTitle} speed={20} /></h2>
+            <div className="max-w-4xl mx-auto mt-6 bg-zinc-950/95 border border-red-500 p-6 md:p-10 rounded shadow-[0_0_50px_rgba(239,68,68,0.2)] backdrop-blur-md mb-16 animate-fade-in flex flex-col w-full relative z-10">
+              <h2 className="text-xl font-bold font-mono text-red-500 mb-6 [text-shadow:0_0_8px_rgba(239,68,68,0.8)]"><TypewriterText text={t.p2TerminalTitle} speed={20} skip={skipTyping} /></h2>
               
               {cipherError && (
                 <div className="mb-6 p-4 bg-red-950/80 border border-red-500 text-red-400 font-mono text-sm text-center animate-pulse rounded">
@@ -917,7 +948,7 @@ export default function Home() {
               )}
 
               <div className="font-mono text-zinc-300 leading-relaxed mb-6 whitespace-pre-wrap bg-black/60 p-4 rounded border border-zinc-900 text-sm">
-                <TypewriterText text={t.p2TerminalDesc} speed={15} delay={300} />
+                <TypewriterText text={t.p2TerminalDesc} speed={15} delay={300} skip={skipTyping} />
               </div>
 
               {/* BẢNG CHỮ CẢI A-Z */}
@@ -946,9 +977,10 @@ export default function Home() {
               <form onSubmit={handleCipherSubmit} className="flex flex-col gap-4 mt-auto">
                 <input 
                   type="text" autoFocus value={cipherAnswer} onChange={(e) => setCipherAnswer(e.target.value)} placeholder={t.p2Placeholder}
-                  className="w-full bg-black border-2 border-zinc-700 focus:border-red-500 text-red-400 font-mono p-4 rounded outline-none transition-all uppercase text-lg tracking-widest text-center"
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full bg-black border-2 border-zinc-700 focus:border-red-500 text-red-400 font-mono p-4 rounded outline-none transition-all uppercase text-lg tracking-widest text-center shadow-inner"
                 />
-                <button type="submit" className="self-end px-8 py-4 bg-red-600 text-white font-bold font-mono hover:bg-red-500 transition-all cursor-pointer rounded w-full tracking-widest">
+                <button type="submit" onClick={(e) => e.stopPropagation()} className="self-end px-8 py-4 bg-red-600 text-white font-bold font-mono hover:bg-red-500 transition-all cursor-pointer rounded w-full tracking-widest shadow-[0_0_15px_rgba(239,68,68,0.5)]">
                   {t.p2Submit}
                 </button>
               </form>
@@ -956,32 +988,32 @@ export default function Home() {
           ) : (
             /* WORKSPACE PHẦN 2 */
             <>
-              <div className="mb-10 p-6 bg-zinc-950/90 border border-red-900/60 rounded flex flex-col">
-                <h2 className="text-md font-bold font-mono text-red-500 mb-4 border-b border-zinc-800 pb-2">
-                  <TypewriterText text={t.p2BriefingTitle} speed={20} delay={500} />
+              <div className="mb-10 p-6 bg-zinc-950/90 border border-red-900/60 rounded flex flex-col relative z-10">
+                <h2 className="text-md font-bold font-mono text-red-500 mb-4 border-b border-zinc-800 pb-2 [text-shadow:0_0_8px_rgba(239,68,68,0.8)]">
+                  <TypewriterText text={t.p2BriefingTitle} speed={20} delay={500} skip={skipTyping} />
                 </h2>
                 <div className="font-mono text-sm text-zinc-300 space-y-3 whitespace-pre-wrap flex-grow">
                   {t.p2BriefingLines.map((line, idx) => (
-                    <p key={idx}><TypewriterText text={line} speed={10} delay={1000 + (idx * 1200)} /></p>
+                    <p key={idx}><TypewriterText text={line} speed={10} delay={1000 + (idx * 1200)} skip={skipTyping} /></p>
                   ))}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-24">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-24 relative z-10">
                 {t.p2Cards.map((card, index) => {
                   const baseDelay = 4500 + (index * 600);
                   return (
                     <div 
                       key={card.id} 
-                      onClick={() => setSelectedEvidence(card)}
-                      className="p-6 bg-zinc-950/90 border border-zinc-700 rounded shadow-2xl relative backdrop-blur-md z-30 flex flex-col hover:border-red-500 transition-all hover:-translate-y-1 cursor-pointer"
+                      onClick={(e) => { e.stopPropagation(); setSelectedEvidence(card); }}
+                      className="p-6 bg-zinc-950/90 border border-zinc-700 rounded shadow-[0_0_15px_rgba(0,0,0,0.8)] relative backdrop-blur-md z-30 flex flex-col hover:border-red-500 transition-all hover:-translate-y-1 cursor-pointer"
                     >
                       <div className="flex justify-between items-start mb-4 border-b border-zinc-800 pb-2">
-                        <span className="text-xs font-mono font-bold text-red-500"><TypewriterText text={card.title} speed={15} delay={baseDelay} /></span>
-                        <span className="text-xs font-mono text-zinc-500"><TypewriterText text={card.tag} speed={15} delay={baseDelay} /></span>
+                        <span className="text-xs font-mono font-bold text-red-500 [text-shadow:0_0_5px_rgba(239,68,68,0.5)]"><TypewriterText text={card.title} speed={15} delay={baseDelay} skip={skipTyping} /></span>
+                        <span className="text-xs font-mono text-zinc-500"><TypewriterText text={card.tag} speed={15} delay={baseDelay} skip={skipTyping} /></span>
                       </div>
                       <div className="text-zinc-300 text-sm leading-relaxed flex-grow mb-4">
-                        <TypewriterText text={card.desc} speed={10} delay={baseDelay + 300} />
+                        <TypewriterText text={card.desc} speed={10} delay={baseDelay + 300} skip={skipTyping} />
                       </div>
                       <div className="text-xs text-red-400 font-mono mt-auto">{lang === "vi" ? "[ Xem chi tiết -> ]" : "[ View detail -> ]"}</div>
                     </div>
@@ -991,10 +1023,10 @@ export default function Home() {
 
               <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black via-black/90 to-transparent flex justify-center z-40">
                 <button 
-                  onClick={() => setStep(8)}
+                  onClick={(e) => { e.stopPropagation(); setStep(8); }}
                   className="px-10 py-4 bg-red-600 text-white font-bold font-mono tracking-widest text-sm md:text-lg shadow-[0_0_30px_rgba(239,68,68,0.4)] hover:bg-red-500 transition-all cursor-pointer rounded-sm hover:scale-105"
                 >
-                  <TypewriterText text={t.p2OpenTerminal} speed={15} delay={7500} />
+                  <TypewriterText text={t.p2OpenTerminal} speed={15} delay={7500} skip={skipTyping} noCursor />
                 </button>
               </div>
             </>
@@ -1005,20 +1037,20 @@ export default function Home() {
 
         {/* MODAL CHI TIẾT P2 */}
         {selectedEvidence && (
-          <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-start justify-center p-4 md:p-8 z-[100] overflow-y-auto">
+          <div onClick={(e) => e.stopPropagation()} className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-start justify-center p-4 md:p-8 z-[100] overflow-y-auto">
             <div className="bg-zinc-950 border border-red-500 w-full max-w-2xl max-h-full overflow-y-auto p-6 md:p-8 rounded font-mono shadow-[0_0_40px_rgba(239,68,68,0.3)] relative mt-10 mb-10">
-              <h2 className="text-xl font-bold text-slate-100 mb-6 border-l-4 border-red-500 pl-4">
+              <h2 className="text-xl font-bold text-slate-100 mb-6 border-l-4 border-red-500 pl-4 [text-shadow:0_0_8px_rgba(239,68,68,0.6)]">
                 <TypewriterText text={selectedEvidence.title} speed={20} />
               </h2>
 
               {selectedEvidence.id === 103 && (
-                <div className="mb-6 w-full flex justify-center bg-zinc-900 p-2 border border-red-900/60 rounded">
+                <div className="mb-6 w-full flex justify-center bg-zinc-900 p-2 border border-red-900/60 rounded shadow-inner">
                   <img src="/bloody_note.png" alt="Bloody Note Cipher" className="w-full h-auto max-h-[350px] object-cover rounded filter contrast-125" />
                 </div>
               )}
 
               {selectedEvidence.id === 104 && (
-                <div className="mb-6 w-full flex justify-center bg-zinc-900 p-2 border border-red-900/60 rounded">
+                <div className="mb-6 w-full flex justify-center bg-zinc-900 p-2 border border-red-900/60 rounded shadow-inner">
                   <img src="/hidden_symbol.png" alt="Hidden USB Upstairs" className="w-full h-auto max-h-[350px] object-cover rounded" />
                 </div>
               )}
@@ -1043,7 +1075,10 @@ export default function Home() {
   // BƯỚC 2, 3, 4: WORKSPACE P1, MASTER BOARD, TERMINAL P1
   // ==========================================
   return (
-    <main className={`h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-slate-100 transition-all duration-1000 flex flex-col`}>
+    <main 
+      onClick={() => setSkipTyping(true)}
+      className={`h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-slate-100 transition-all duration-1000 flex flex-col`}
+    >
       <div className="fixed inset-0 bg-black/70 z-0 pointer-events-none"></div>
       <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
 
@@ -1052,40 +1087,41 @@ export default function Home() {
         
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 border-b border-zinc-800 pb-6">
           <div className="mb-4 md:mb-0">
-            <span className="text-xs tracking-widest text-amber-500 font-mono"><TypewriterText text={t.subtitle} speed={20} /></span>
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold font-mono tracking-wider mt-2 text-cyan-400 break-words">
-              <TypewriterText text={t.title} speed={25} delay={300}/>
+            <span className="text-xs tracking-widest text-amber-500 font-mono"><TypewriterText text={t.subtitle} speed={20} skip={skipTyping} /></span>
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold font-mono tracking-wider mt-2 text-cyan-400 break-words [text-shadow:0_0_10px_rgba(34,211,238,0.8)]">
+              <TypewriterText text={t.title} speed={25} delay={300} skip={skipTyping} />
             </h1>
           </div>
-          <div className="flex gap-4">
-             <button onClick={() => setStep(0)} className="px-4 py-2 border border-zinc-700 bg-zinc-900 hover:border-red-500 hover:text-red-400 text-xs font-mono transition-all rounded cursor-pointer">{t.exitBtn}</button>
-             <button onClick={() => setLang(lang === "vi" ? "en" : "vi")} className="px-4 py-2 border border-zinc-700 bg-zinc-900 hover:border-cyan-400 hover:text-cyan-400 text-xs font-mono transition-all rounded cursor-pointer">{t.langBtn}</button>
+          <div className="flex gap-4 z-50">
+             <button onClick={(e) => { e.stopPropagation(); setStep(0); }} className="px-4 py-2 border border-zinc-700 bg-zinc-900 hover:border-red-500 hover:text-red-400 text-xs font-mono transition-all rounded cursor-pointer">{t.exitBtn}</button>
+             <button onClick={(e) => { e.stopPropagation(); setLang(lang === "vi" ? "en" : "vi"); }} className="px-4 py-2 border border-zinc-700 bg-zinc-900 hover:border-cyan-400 hover:text-cyan-400 text-xs font-mono transition-all rounded cursor-pointer">{t.langBtn}</button>
           </div>
         </header>
 
         {step === 4 ? (
-          <div className="max-w-3xl mx-auto mt-12 bg-zinc-950/90 border border-cyan-400 p-6 md:p-8 rounded shadow-[0_0_50px_rgba(56,189,248,0.2)] backdrop-blur-md mb-16 animate-fade-in flex flex-col w-full">
-            <h2 className="text-xl font-bold font-mono text-cyan-400 mb-6"><TypewriterText text={t.conclusionTitle} speed={20} /></h2>
+          <div className="max-w-3xl mx-auto mt-12 bg-zinc-950/90 border border-cyan-400 p-6 md:p-8 rounded shadow-[0_0_50px_rgba(56,189,248,0.2)] backdrop-blur-md mb-16 animate-fade-in flex flex-col w-full relative z-10">
+            <h2 className="text-xl font-bold font-mono text-cyan-400 mb-6 [text-shadow:0_0_8px_rgba(34,211,238,0.8)]"><TypewriterText text={t.conclusionTitle} speed={20} skip={skipTyping} /></h2>
             <div className="font-mono text-zinc-300 leading-loose mb-8 whitespace-pre-wrap flex-grow">
-              <TypewriterText text={t.conclusionText} speed={15} delay={500} />
+              <TypewriterText text={t.conclusionText} speed={15} delay={500} skip={skipTyping} />
             </div>
             <form onSubmit={handleSubmitAnswer} className="flex flex-col gap-4 mt-auto">
               <input 
                 type="text" autoFocus value={finalAnswer} onChange={(e) => setFinalAnswer(e.target.value)} placeholder={t.placeholder}
-                className="w-full bg-black border-2 border-zinc-700 focus:border-amber-500 text-amber-500 font-mono p-4 rounded outline-none transition-all text-center tracking-widest text-lg"
+                onClick={(e) => e.stopPropagation()}
+                className="w-full bg-black border-2 border-zinc-700 focus:border-amber-500 text-amber-500 font-mono p-4 rounded outline-none transition-all text-center tracking-widest text-lg shadow-inner"
               />
-              <button type="submit" className="self-end px-8 py-4 bg-cyan-400 text-black font-bold font-mono hover:bg-cyan-300 transition-all cursor-pointer rounded w-full tracking-widest">
+              <button type="submit" onClick={(e) => e.stopPropagation()} className="self-end px-8 py-4 bg-cyan-400 text-black font-bold font-mono hover:bg-cyan-300 transition-all cursor-pointer rounded w-full tracking-widest shadow-[0_0_15px_rgba(34,211,238,0.5)]">
                 {t.submitBtn}
               </button>
             </form>
           </div>
         ) : step === 3 ? (
-          <div className="w-full bg-zinc-950/90 border border-cyan-500/50 p-4 md:p-6 rounded shadow-[0_0_50px_rgba(56,189,248,0.1)] backdrop-blur-md mb-16 animate-fade-in flex flex-col">
-            <h2 className="text-xl font-bold font-mono text-amber-500 mb-2">
-              <TypewriterText text={t.boardTitle} speed={20} />
+          <div className="w-full bg-zinc-950/90 border border-cyan-500/50 p-4 md:p-6 rounded shadow-[0_0_50px_rgba(56,189,248,0.1)] backdrop-blur-md mb-16 animate-fade-in flex flex-col relative z-10">
+            <h2 className="text-xl font-bold font-mono text-amber-500 mb-2 [text-shadow:0_0_8px_rgba(245,158,11,0.8)]">
+              <TypewriterText text={t.boardTitle} speed={20} skip={skipTyping} />
             </h2>
             <p className="font-mono text-sm text-cyan-400 mb-8 pb-4 border-b border-zinc-800">
-              <TypewriterText text={t.boardDesc} speed={15} delay={400} />
+              <TypewriterText text={t.boardDesc} speed={15} delay={400} skip={skipTyping} />
             </p>
 
             {errorMsgP1 && (
@@ -1094,15 +1130,15 @@ export default function Home() {
               </div>
             )}
 
-            <div className="overflow-x-auto flex-grow">
+            <div className="overflow-x-auto flex-grow" onClick={(e) => e.stopPropagation()}>
               <table className="w-full text-left font-mono text-sm">
                 <thead>
                   <tr className="border-b border-cyan-900/50 text-amber-500 bg-cyan-950/20">
-                    <th className="p-4 whitespace-nowrap"><TypewriterText text={t.boardHeaders[0]} delay={1000} /></th>
-                    <th className="p-4 whitespace-nowrap"><TypewriterText text={t.boardHeaders[1]} delay={1000} /></th>
-                    <th className="p-4 min-w-[250px]"><TypewriterText text={t.boardHeaders[2]} delay={1000} /></th>
-                    <th className="p-4 min-w-[250px]"><TypewriterText text={t.boardHeaders[3]} delay={1000} /></th>
-                    <th className="p-4 text-center whitespace-nowrap"><TypewriterText text={t.boardHeaders[4]} delay={1000} /></th>
+                    <th className="p-4 whitespace-nowrap"><TypewriterText text={t.boardHeaders[0]} delay={1000} skip={skipTyping} /></th>
+                    <th className="p-4 whitespace-nowrap"><TypewriterText text={t.boardHeaders[1]} delay={1000} skip={skipTyping} /></th>
+                    <th className="p-4 min-w-[250px]"><TypewriterText text={t.boardHeaders[2]} delay={1000} skip={skipTyping} /></th>
+                    <th className="p-4 min-w-[250px]"><TypewriterText text={t.boardHeaders[3]} delay={1000} skip={skipTyping} /></th>
+                    <th className="p-4 text-center whitespace-nowrap"><TypewriterText text={t.boardHeaders[4]} delay={1000} skip={skipTyping} noCursor /></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1115,14 +1151,14 @@ export default function Home() {
                         className={`border-b border-zinc-800 transition-all cursor-pointer group hover:bg-cyan-950/30
                           ${isSelected ? "bg-cyan-950/40 border-l-4 border-l-cyan-400" : ""}`}
                       >
-                        <td className="p-4 text-cyan-400 font-bold align-top"><TypewriterText text={row.time} speed={10} delay={baseDelay} /></td>
-                        <td className="p-4 text-amber-500 align-top"><TypewriterText text={row.source} speed={10} delay={baseDelay+100} /></td>
-                        <td className="p-4 text-zinc-300 align-top"><TypewriterText text={row.data} speed={10} delay={baseDelay+200} /></td>
-                        <td className={`p-4 align-top ${isSelected ? "text-cyan-300 font-bold" : "text-zinc-400"}`}>
-                          <TypewriterText text={row.anomaly} speed={10} delay={baseDelay+400} />
+                        <td className="p-4 text-cyan-400 font-bold align-top"><TypewriterText text={row.time} speed={10} delay={baseDelay} skip={skipTyping} /></td>
+                        <td className="p-4 text-amber-500 align-top"><TypewriterText text={row.source} speed={10} delay={baseDelay+100} skip={skipTyping} /></td>
+                        <td className="p-4 text-zinc-300 align-top"><TypewriterText text={row.data} speed={10} delay={baseDelay+200} skip={skipTyping} /></td>
+                        <td className={`p-4 align-top ${isSelected ? "text-cyan-300 font-bold [text-shadow:0_0_5px_currentColor]" : "text-zinc-400"}`}>
+                          <TypewriterText text={row.anomaly} speed={10} delay={baseDelay+400} skip={skipTyping} noCursor={index !== t.boardRows.length - 1} />
                         </td>
                         <td className="p-4 text-center align-middle">
-                          <div className={`w-6 h-6 mx-auto border flex items-center justify-center transition-all ${isSelected ? 'border-cyan-400 bg-cyan-400 text-black' : 'border-zinc-600'}`}>
+                          <div className={`w-6 h-6 mx-auto border flex items-center justify-center transition-all ${isSelected ? 'border-cyan-400 bg-cyan-400 text-black shadow-[0_0_10px_rgba(34,211,238,0.8)]' : 'border-zinc-600'}`}>
                             {isSelected && "✓"}
                           </div>
                         </td>
@@ -1136,38 +1172,38 @@ export default function Home() {
             {selectedRows.length === 3 && (
               <div className="mt-8 flex justify-end animate-fade-in mt-auto">
                 <button 
-                  onClick={handleAnalyzeBoard}
-                  className="px-8 py-4 bg-cyan-400 text-black font-bold font-mono tracking-widest hover:bg-cyan-300 transition-all cursor-pointer rounded"
+                  onClick={(e) => { e.stopPropagation(); handleAnalyzeBoard(); }}
+                  className="px-8 py-4 bg-cyan-400 text-black font-bold font-mono tracking-widest hover:bg-cyan-300 transition-all cursor-pointer rounded shadow-[0_0_15px_rgba(34,211,238,0.5)] z-50 relative"
                 >
-                  <TypewriterText text={t.analyzeBoardBtn} speed={20} />
+                  <TypewriterText text={t.analyzeBoardBtn} speed={20} skip={skipTyping} noCursor />
                 </button>
               </div>
             )}
           </div>
         ) : (
           <>
-            <div className="mb-10 p-6 bg-zinc-950/80 border border-cyan-900/60 rounded flex flex-col h-auto">
-              <h2 className="text-md font-bold font-mono text-amber-500 mb-4 border-b border-zinc-800 pb-2">
-                <TypewriterText text={t.briefingTitle} speed={20} delay={500} />
+            <div className="mb-10 p-6 bg-zinc-950/80 border border-cyan-900/60 rounded flex flex-col h-auto relative z-10">
+              <h2 className="text-md font-bold font-mono text-amber-500 mb-4 border-b border-zinc-800 pb-2 [text-shadow:0_0_8px_rgba(245,158,11,0.8)]">
+                <TypewriterText text={t.briefingTitle} speed={20} delay={500} skip={skipTyping} />
               </h2>
               <div className="font-mono text-sm text-cyan-400 space-y-3 whitespace-pre-wrap flex-grow">
                 {t.briefingLines.map((line, idx) => (
-                  <p key={idx}><TypewriterText text={line} speed={10} delay={1000 + (idx * 1200)} /></p>
+                  <p key={idx}><TypewriterText text={line} speed={10} delay={1000 + (idx * 1200)} skip={skipTyping} noCursor={idx !== t.briefingLines.length - 1} /></p>
                 ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16 h-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16 h-auto relative z-10">
               {t.cards.map((card, index) => {
                 const baseDelay = 6500 + (index * 600);
                 return (
-                  <div key={card.id} onClick={() => setSelectedEvidence(card)} className="p-6 bg-zinc-950/90 border border-zinc-700 rounded shadow-2xl relative backdrop-blur-md z-30 flex flex-col hover:border-cyan-700 transition-all hover:-translate-y-1 h-auto cursor-pointer">
+                  <div key={card.id} onClick={(e) => { e.stopPropagation(); setSelectedEvidence(card); }} className="p-6 bg-zinc-950/90 border border-zinc-700 rounded shadow-[0_0_15px_rgba(0,0,0,0.8)] relative backdrop-blur-md z-30 flex flex-col hover:border-cyan-700 transition-all hover:-translate-y-1 h-auto cursor-pointer">
                     <div className="flex justify-between items-start mb-4 border-b border-zinc-800 pb-2">
-                      <span className="text-xs font-mono font-bold text-amber-500"><TypewriterText text={card.title} speed={15} delay={baseDelay} /></span>
-                      <span className="text-xs font-mono text-cyan-600"><TypewriterText text={card.tag} speed={15} delay={baseDelay} /></span>
+                      <span className="text-xs font-mono font-bold text-amber-500 [text-shadow:0_0_5px_rgba(245,158,11,0.5)]"><TypewriterText text={card.title} speed={15} delay={baseDelay} skip={skipTyping} /></span>
+                      <span className="text-xs font-mono text-cyan-600"><TypewriterText text={card.tag} speed={15} delay={baseDelay} skip={skipTyping} /></span>
                     </div>
                     <div className="text-zinc-300 text-sm leading-relaxed flex-grow mb-4">
-                      <TypewriterText text={card.desc} speed={10} delay={baseDelay + 300} />
+                      <TypewriterText text={card.desc} speed={10} delay={baseDelay + 300} skip={skipTyping} />
                     </div>
                     <div className="text-xs text-cyan-400 font-mono mt-auto">{lang === "vi" ? "[ Xem chi tiết -> ]" : "[ View detail -> ]"}</div>
                   </div>
@@ -1177,10 +1213,10 @@ export default function Home() {
 
             <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black via-black/90 to-transparent flex justify-center z-40">
               <button 
-                onClick={() => setStep(3)}
-                className="px-10 py-4 bg-amber-500 text-black font-bold font-mono tracking-widest text-sm md:text-lg shadow-[0_0_30px_rgba(245,158,11,0.3)] hover:bg-amber-400 transition-all cursor-pointer rounded-sm hover:scale-105"
+                onClick={(e) => { e.stopPropagation(); setStep(3); }}
+                className="px-10 py-4 bg-amber-500 text-black font-bold font-mono tracking-widest text-sm md:text-lg shadow-[0_0_30px_rgba(245,158,11,0.4)] hover:bg-amber-400 transition-all cursor-pointer rounded-sm hover:scale-105"
               >
-                <TypewriterText text={t.openBoardBtn} speed={15} delay={9500} />
+                <TypewriterText text={t.openBoardBtn} speed={15} delay={9500} skip={skipTyping} noCursor />
               </button>
             </div>
           </>
@@ -1191,9 +1227,9 @@ export default function Home() {
 
       {/* MODAL CHI TIẾT P1 */}
       {selectedEvidence && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 md:p-8 z-[100] overflow-y-auto">
+        <div onClick={(e) => e.stopPropagation()} className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 md:p-8 z-[100] overflow-y-auto">
           <div className="bg-zinc-950 border border-cyan-400 w-full max-w-2xl max-h-full overflow-y-auto p-6 md:p-8 rounded font-mono shadow-[0_0_40px_rgba(56,189,248,0.2)] relative mt-10 mb-10">
-            <h2 className="text-xl font-bold text-slate-100 mb-6 border-l-4 border-cyan-400 pl-4">
+            <h2 className="text-xl font-bold text-slate-100 mb-6 border-l-4 border-cyan-400 pl-4 [text-shadow:0_0_8px_rgba(34,211,238,0.6)]">
               <TypewriterText text={selectedEvidence.title} speed={20} />
             </h2>
             <div className="text-zinc-300 text-sm leading-loose mb-8 bg-black/60 p-4 md:p-6 rounded border border-zinc-800 whitespace-pre-wrap">
