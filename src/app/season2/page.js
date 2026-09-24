@@ -913,8 +913,9 @@ export default function Season2() {
     );
   }
 
-  // ==========================================
+// ==========================================
   // DASHBOARD CHÍNH (Bước 2,3,4 và 7,8) (P1 & P2)
+  // ĐÃ FIX LỖI SCROLL TRÊN ĐIỆN THOẠI
   // ==========================================
   const customStyles = `
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
@@ -929,21 +930,21 @@ export default function Season2() {
   `;
 
   return (
-    <main onClick={() => setSkipTyping(true)} className={`h-screen w-full overflow-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-emerald-100 transition-all duration-1000 flex flex-col`}>
+    <main onClick={() => setSkipTyping(true)} className={`min-h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-emerald-100 transition-all duration-1000 flex flex-col pb-10`}>
       <style dangerouslySetInnerHTML={{__html: customStyles}} />
       <div className="fixed inset-0 bg-zinc-950/85 z-0 pointer-events-none"></div>
       <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-40"></div>
 
-      <div className="relative z-20 flex flex-col h-full p-4 md:p-8 max-w-[1600px] mx-auto w-full">
+      <div className="relative z-20 flex flex-col min-h-screen p-4 md:p-8 max-w-[1600px] mx-auto w-full">
         <TopStatusBar />
         
         <header className={`flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b ${theme.border} pb-4 shrink-0`}>
           <div>
             <span className={`text-xs tracking-widest ${theme.secondaryText} font-mono`}>
-              <TypewriterText text={step >= 7 ? t.p2Subtitle || "" : t.subtitle || ""} speed={20} skip={skipTyping} noGlow />
+              <TypewriterText text={step >= 7 ? t.p2Subtitle : t.subtitle} speed={20} skip={skipTyping} noGlow />
             </span>
             <h1 className={`text-2xl md:text-3xl font-bold font-mono tracking-wider mt-1 ${theme.primaryText} [text-shadow:0_0_10px_rgba(16,185,129,0.5)]`}>
-              <TypewriterText text={step >= 7 ? t.p2Title || "" : t.title || ""} speed={25} delay={300} skip={skipTyping} />
+              <TypewriterText text={step >= 7 ? t.p2Title : t.title} speed={25} delay={300} skip={skipTyping} />
             </h1>
           </div>
           <div className="flex gap-4 mt-4 md:mt-0 z-50">
@@ -957,7 +958,7 @@ export default function Season2() {
             <div className={`w-full max-w-3xl bg-black/80 border-2 ${step === 8 ? 'border-amber-500 shadow-[0_0_40px_rgba(245,158,11,0.2)]' : 'border-emerald-600 shadow-[0_0_40px_rgba(16,185,129,0.2)]'} p-8 rounded backdrop-blur-md relative z-10 transition-transform ${((step===3||step===4)&&shakeP1) || (step===8&&shakeP2) ? 'animate-shake' : ''}`}>
               <div className="flex justify-between items-center mb-6">
                 <h2 className={`text-xl font-bold font-mono ${step === 8 ? 'text-amber-500' : 'text-sky-400'}`}>
-                  <TypewriterText text={step === 8 ? t.p2TerminalTitle || "" : (step === 4 ? t.conclusionTitle || "" : t.p1BoardTitle || "")} speed={20} skip={skipTyping} />
+                  <TypewriterText text={step === 8 ? t.p2TerminalTitle : (step === 4 ? t.conclusionTitle : t.p1BoardTitle)} speed={20} skip={skipTyping} />
                 </h2>
                 {step === 8 && (
                   <div className={`text-4xl font-bold font-mono bg-black px-4 py-2 rounded border ${timeLeft <= 60 ? 'text-red-500 border-red-500 animate-pulse' : 'text-amber-500 border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]'}`}>
@@ -973,7 +974,7 @@ export default function Season2() {
               ) : null}
 
               <div className="font-mono text-zinc-300 leading-loose mb-8 whitespace-pre-wrap flex-grow">
-                <TypewriterText text={step === 8 ? t.p2TerminalDesc || "" : (step === 4 ? t.conclusionText || "" : t.p1BoardDesc || "")} speed={15} delay={300} skip={skipTyping} noGlow />
+                <TypewriterText text={step === 8 ? t.p2TerminalDesc : (step === 4 ? t.conclusionText : t.p1BoardDesc)} speed={15} delay={300} skip={skipTyping} noGlow />
               </div>
 
               {step === 8 && (
@@ -999,7 +1000,7 @@ export default function Season2() {
                 />
                 <div className="flex flex-col md:flex-row gap-4">
                   <button type="button" onClick={(e) => { e.stopPropagation(); setStep(step === 8 ? 7 : 2); }} className={`w-full md:w-1/3 px-4 py-4 bg-black border border-zinc-800 text-zinc-500 font-bold font-mono hover:${theme.secondaryText} hover:${theme.borderActive} transition-all cursor-pointer rounded tracking-widest text-center shadow-inner`}>
-                    <TypewriterText text={t.backToDocsBtn || ""} speed={30} skip={skipTyping} noCursor noGlow />
+                    <TypewriterText text={t.backToDocsBtn} speed={30} skip={skipTyping} noCursor noGlow />
                   </button>
                   <button type="submit" onClick={(e) => e.stopPropagation()} className={`w-full md:w-2/3 px-4 py-4 ${step===8 ? 'bg-amber-600 hover:bg-amber-500 text-black' : 'bg-emerald-600 hover:bg-emerald-500 text-black'} font-bold font-mono transition-all cursor-pointer rounded tracking-widest`}>
                     {step === 8 ? t.p2Submit : (step === 4 ? t.submitBtn : t.p1BoardSubmit)}
@@ -1009,22 +1010,22 @@ export default function Season2() {
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0 relative z-10">
-            <div className={`w-full lg:w-1/3 flex flex-col bg-black/50 border ${theme.border} rounded-lg p-6 overflow-y-auto custom-scrollbar shadow-inner backdrop-blur-sm shrink-0 lg:shrink`}>
+          <div className="flex-1 flex flex-col lg:flex-row gap-6 relative z-10 pb-20">
+            <div className={`w-full lg:w-1/3 flex flex-col bg-black/50 border ${theme.border} rounded-lg p-6 h-fit shadow-inner backdrop-blur-sm`}>
               <h2 className={`text-md font-bold font-mono ${theme.secondaryText} mb-4 border-b ${theme.border} pb-2 flex items-center gap-2`}>
                 <span className={`w-2 h-2 rounded-full ${step >= 7 ? 'bg-amber-500' : 'bg-emerald-500'} animate-ping`}></span>
-                <TypewriterText text={step >= 7 ? t.p2BriefingTitle || "" : t.briefingTitle || ""} speed={20} delay={500} skip={skipTyping} noGlow />
+                <TypewriterText text={step >= 7 ? t.p2BriefingTitle : t.briefingTitle} speed={20} delay={500} skip={skipTyping} noGlow />
               </h2>
               <div className="font-mono text-sm text-zinc-300 space-y-4 whitespace-pre-wrap pb-4">
                 {(step >= 7 ? t.p2BriefingLines : t.briefingLines).map((line, idx) => (
                   <p key={idx} className={`border-l-2 ${step >= 7 ? 'border-amber-800' : 'border-emerald-800'} pl-3`}>
-                    <TypewriterText text={line || ""} speed={10} delay={1000 + (idx * 1200)} skip={skipTyping} noCursor={idx !== (step >= 7 ? t.p2BriefingLines : t.briefingLines).length - 1} noGlow />
+                    <TypewriterText text={line} speed={10} delay={1000 + (idx * 1200)} skip={skipTyping} noCursor={idx !== (step >= 7 ? t.p2BriefingLines : t.briefingLines).length - 1} noGlow />
                   </p>
                 ))}
               </div>
             </div>
 
-            <div className="w-full lg:w-2/3 flex flex-col gap-6 overflow-y-auto custom-scrollbar pb-6">
+            <div className="w-full lg:w-2/3 flex flex-col gap-6 h-fit">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(step >= 7 ? t.p2Cards : t.cards).map((card, index) => {
                   const baseDelay = 4500 + (index * 600);
@@ -1035,11 +1036,11 @@ export default function Season2() {
                       className={`p-5 bg-zinc-950/70 border border-zinc-800/50 rounded-lg shadow-md backdrop-blur-sm flex flex-col hover:${theme.borderActive} hover:bg-zinc-900 transition-all cursor-pointer group`}
                     >
                       <div className={`flex justify-between items-start mb-3 border-b ${theme.border} pb-2`}>
-                        <span className={`text-xs font-mono font-bold ${theme.primaryText}`}><TypewriterText text={card.title || ""} speed={15} delay={baseDelay} skip={skipTyping} noGlow /></span>
-                        <span className={`text-[10px] font-mono ${theme.secondaryText} bg-black px-2 py-0.5 rounded border border-zinc-800`}><TypewriterText text={card.tag || ""} speed={15} delay={baseDelay} skip={skipTyping} noGlow /></span>
+                        <span className={`text-xs font-mono font-bold ${theme.primaryText}`}><TypewriterText text={card.title} speed={15} delay={baseDelay} skip={skipTyping} noGlow /></span>
+                        <span className={`text-[10px] font-mono ${theme.secondaryText} bg-black px-2 py-0.5 rounded border border-zinc-800`}><TypewriterText text={card.tag} speed={15} delay={baseDelay} skip={skipTyping} noGlow /></span>
                       </div>
                       <div className="text-zinc-400 text-xs md:text-sm leading-relaxed flex-grow mb-3">
-                        <TypewriterText text={card.desc || ""} speed={10} delay={baseDelay + 300} skip={skipTyping} noGlow />
+                        <TypewriterText text={card.desc} speed={10} delay={baseDelay + 300} skip={skipTyping} noGlow />
                       </div>
                       <div className={`text-xs text-zinc-500 font-mono mt-auto group-hover:${theme.primaryText} transition-colors`}>
                         {lang === "vi" ? ">> TRÍCH XUẤT DỮ LIỆU <<" : ">> EXTRACT DATA <<"}
@@ -1054,7 +1055,7 @@ export default function Season2() {
                   onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(step >= 7 ? 8 : 3); }}
                   className={`px-8 py-4 ${step >= 7 ? 'bg-amber-600 hover:bg-amber-500 text-black' : 'bg-emerald-600 hover:bg-emerald-500 text-black'} font-bold font-mono tracking-widest text-sm rounded transition-all cursor-pointer w-full md:w-auto animate-pulse`}
                 >
-                  <TypewriterText text={step >= 7 ? t.p2OpenTerminal || "" : t.openBoardBtn || ""} speed={15} delay={7500} skip={skipTyping} noCursor noGlow />
+                  <TypewriterText text={step >= 7 ? t.p2OpenTerminal : t.openBoardBtn} speed={15} delay={7500} skip={skipTyping} noCursor noGlow />
                 </button>
               </div>
             </div>
