@@ -2,31 +2,36 @@
 
 import { useState, useEffect, useRef } from "react";
 
-// --- HOOK: HIỆU ỨNG CHỮ ĐÁNH MÁY TERMINAL ---
-const useTypewriter = (text = "", speed = 15, delay = 0, skip = false) => {
-  const [displayedText, setDisplayedText] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+// ==========================================
+// 🛠️ HOOK: HIỆU ỨNG GÕ CHỮ (TERMINAL)
+// TODO: Mai mốt rảnh gom cái hook này với SS1 vào chung 1 file utils.js cho đỡ lặp code
+// ==========================================
+const useTerminalEffect = (text = "", speed = 15, delay = 0, skip = false) => {
+  const [renderText, setRenderText] = useState("");
+  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     if (!text) return;
+    
+    // Bấm skip là nhả full chữ luôn, khỏi đợi
     if (skip) {
-      setDisplayedText(text);
-      setIsTyping(false);
+      setRenderText(text);
+      setIsPrinting(false);
       return;
     }
     
-    setDisplayedText("");
-    setIsTyping(true);
+    setRenderText("");
+    setIsPrinting(true);
     let i = 0;
     
     const timeout = setTimeout(() => {
       const typingInterval = setInterval(() => {
         if (i < text.length) {
-          setDisplayedText(text.slice(0, i + 1));
+          setRenderText(text.slice(0, i + 1));
           i++;
         } else {
           clearInterval(typingInterval);
-          setIsTyping(false);
+          setIsPrinting(false);
         }
       }, speed);
       return () => clearInterval(typingInterval);
@@ -35,61 +40,81 @@ const useTypewriter = (text = "", speed = 15, delay = 0, skip = false) => {
     return () => clearTimeout(timeout);
   }, [text, speed, delay, skip]);
 
-  return { displayedText, isTyping };
+  return { renderText, isPrinting };
 };
 
-const TypewriterText = ({ text = "", speed = 15, delay = 0, className, skip = false, noCursor = false, noGlow = false }) => {
-  const { displayedText, isTyping } = useTypewriter(text, speed, delay, skip);
+// Wrapper Component hiển thị chữ
+const TerminalText = ({ text = "", speed = 15, delay = 0, className, skip = false, noCursor = false, noGlow = false }) => {
+  const { renderText, isPrinting } = useTerminalEffect(text, speed, delay, skip);
   const glowClass = noGlow ? "" : "[text-shadow:0_0_8px_currentColor]";
+  
   return (
     <span className={`${className || ""} ${glowClass} transition-all`}>
-      {displayedText}
+      {renderText}
       {!noCursor && (
-        <span className={`inline-block w-2 h-4 ml-1 bg-current align-middle ${isTyping ? "animate-pulse" : "opacity-0"}`}></span>
+        <span className={`inline-block w-2 h-4 ml-1 bg-current align-middle ${isPrinting ? "animate-pulse" : "opacity-0"}`}></span>
       )}
     </span>
   );
 };
 
+// ==========================================
+// 🎮 MAIN GAME COMPONENT - TRILOGY 2215 SS2
+// ==========================================
 export default function Season2() {
-  const [lang, setLang] = useState("vi");
-  const [step, setStep] = useState(-3); 
-  const [selectedEvidence, setSelectedEvidence] = useState(null);
-  const [skipTyping, setSkipTyping] = useState(false);
+  const [locale, setLocale] = useState("vi");
+  const [gameStage, setGameStage] = useState(-3); 
+  const [activeDoc, setActiveDoc] = useState(null); // Side-panel evidence
+  const [skipAll, setSkipAll] = useState(false);
   
-  // Audio & SFX Refs
+  // --- AUDIO & SFX (Dùng useRef để tránh re-render giật lag) ---
   const audioRef = useRef(null);
   const sfxRef = useRef(null);
-  const [isMuted, setIsMuted] = useState(true);
+  const [soundOff, setSoundOff] = useState(true);
 
-  // Gameplay State
-  const [logicAnswer, setLogicAnswer] = useState("");
-  const [logicError, setLogicError] = useState("");
-  const [keywordAnswer, setKeywordAnswer] = useState("");
-  const [strikesP1, setStrikesP1] = useState(3);
-  const [shakeP1, setShakeP1] = useState(false);
+  // --- TRẠNG THÁI P1 (Barcode) ---
+  const [ans_P1_code, setAns_P1_code] = useState("");
+  const [errAlertP1, setErrAlertP1] = useState("");
+  const [ans_P1_final, setAns_P1_final] = useState("");
+  const [lives_P1, setLives_P1] = useState(3);
+  const [shake_P1, setShake_P1] = useState(false); // Cờ rung màn hình
 
-  const [scadaAnswer, setScadaAnswer] = useState("");
-  const [scadaError, setScadaError] = useState("");
-  const [strikesP2, setStrikesP2] = useState(3);
-  const [shakeP2, setShakeP2] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(300);
+  // --- TRẠNG THÁI P2 (SCADA Tunnel) ---
+  const [ans_P2_override, setAns_P2_override] = useState("");
+  const [errAlertP2, setErrAlertP2] = useState("");
+  const [lives_P2, setLives_P2] = useState(3);
+  const [shake_P2, setShake_P2] = useState(false);
+  const [scadaTimer, setScadaTimer] = useState(300); // 5 phút
 
-  const [bossAnswer, setBossAnswer] = useState("");
-  const [bossError, setBossError] = useState("");
-  const [strikesBoss, setStrikesBoss] = useState(3);
-  const [shakeBoss, setShakeBoss] = useState(false);
+  // --- TRẠNG THÁI P3 (Boss Fight) ---
+  const [ans_P3_prime, setAns_P3_prime] = useState("");
+  const [errAlertP3, setErrAlertP3] = useState("");
+  const [lives_Boss, setLives_Boss] = useState(3);
+  const [shake_Boss, setShake_Boss] = useState(false);
 
-  // Esc key for sliding panel
+  // --- HỆ THỐNG LẮNG NGHE PHÍM ---
   useEffect(() => {
     const handleEsc = (e) => {
-      if (e.key === 'Escape' && selectedEvidence) setSelectedEvidence(null);
+      // Bấm ESC đóng panel cho tiện
+      if (e.key === 'Escape' && activeDoc) setActiveDoc(null);
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [selectedEvidence]);
+  }, [activeDoc]);
 
-  // Khởi tạo đối tượng Audio một lần duy nhất
+  // Enter để quất luôn vô game
+  useEffect(() => {
+    const handleEnterStart = (e) => {
+      if (gameStage === -3 && e.key === 'Enter') {
+        setSoundOff(false);
+        setGameStage(-2);
+      }
+    };
+    window.addEventListener('keydown', handleEnterStart);
+    return () => window.removeEventListener('keydown', handleEnterStart);
+  }, [gameStage]);
+
+  // Init Audio object 1 lần lúc mount
   useEffect(() => {
     if (typeof window !== "undefined") {
       if (!audioRef.current) {
@@ -100,84 +125,68 @@ export default function Season2() {
       if (!sfxRef.current) {
         sfxRef.current = new Audio();
         sfxRef.current.loop = true;
-        sfxRef.current.volume = 0.5; // Âm lượng hiệu ứng súng/mưa vừa phải
+        sfxRef.current.volume = 0.5; // Nhỏ thôi kẻo điếc tai
       }
     }
   }, []);
 
-  // Xử lý luồng Nhạc nền (BGM)
+  // --- ĐIỀU PHỐI BGM (Nhạc nền) ---
   useEffect(() => {
     if (audioRef.current) {
       let nextSrc = "/p1ss2.mp3";
-      if (step >= 16) nextSrc = "/boss_bgm.mp3";
-      else if (step >= 7 && step < 16) nextSrc = "/p2ss2.mp3";
+      if (gameStage >= 16) nextSrc = "/boss_bgm.mp3";
+      else if (gameStage >= 7 && gameStage < 16) nextSrc = "/p2ss2.mp3";
 
       if (!audioRef.current.src.includes(nextSrc)) {
         audioRef.current.src = nextSrc;
-        if (!isMuted) audioRef.current.play().catch(e => console.log("Autoplay blocked:", e));
+        if (!soundOff) audioRef.current.play().catch(e => console.log("Trình duyệt block autoplay bgm r:", e));
       }
     }
-  }, [step, isMuted]);
+  }, [gameStage, soundOff]);
 
-  // Xử lý luồng Hiệu ứng Âm thanh (SFX - Súng máy & Mưa)
+  // --- ĐIỀU PHỐI SFX (Hiệu ứng Súng / Mưa) ---
   useEffect(() => {
     if (sfxRef.current) {
-      if (step === 17 || step === 18) {
-        // Cảnh trong kho: Tiếng súng máy
-        if (!sfxRef.current.src.includes("sfx_gunfire.mp3")) {
-          sfxRef.current.src = "/sfx_gunfire.mp3";
-        }
-        if (!isMuted) sfxRef.current.play().catch(e => console.log("SFX blocked:", e));
-      } else if (step === 19 || step === 20) {
-        // Cảnh ngoài đường băng: Tiếng mưa
-        if (!sfxRef.current.src.includes("sfx_rain.mp3")) {
-          sfxRef.current.src = "/sfx_rain.mp3";
-        }
-        if (!isMuted) sfxRef.current.play().catch(e => console.log("SFX blocked:", e));
+      if (gameStage === 17 || gameStage === 18) {
+        // Cảnh trong kho: Súng máy bòm bòm
+        if (!sfxRef.current.src.includes("sfx_gunfire.mp3")) sfxRef.current.src = "/sfx_gunfire.mp3";
+        if (!soundOff) sfxRef.current.play().catch(e => console.log("Block sfx:", e));
+      } else if (gameStage === 19 || gameStage === 20) {
+        // Cảnh đường băng: Mưa lâm râm
+        if (!sfxRef.current.src.includes("sfx_rain.mp3")) sfxRef.current.src = "/sfx_rain.mp3";
+        if (!soundOff) sfxRef.current.play().catch(e => console.log("Block sfx:", e));
       } else {
-        // Tắt SFX ở các màn khác
         sfxRef.current.pause();
       }
     }
-  }, [step, isMuted]);
+  }, [gameStage, soundOff]);
 
-  // Nút Mute tổng
+  // Mute tổng (Global)
   useEffect(() => {
-    if (audioRef.current) isMuted ? audioRef.current.pause() : audioRef.current.play().catch(e => console.log(e));
+    if (audioRef.current) soundOff ? audioRef.current.pause() : audioRef.current.play().catch(e => console.log(e));
     if (sfxRef.current) {
-      if (isMuted) sfxRef.current.pause();
-      else if (step >= 17) sfxRef.current.play().catch(e => console.log(e));
+      if (soundOff) sfxRef.current.pause();
+      else if (gameStage >= 17) sfxRef.current.play().catch(e => console.log(e));
     }
-  }, [isMuted, step]);
+  }, [soundOff, gameStage]);
 
-  // Enter to start
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (step === -3 && e.key === 'Enter') {
-        setIsMuted(false);
-        setStep(-2);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [step]);
+  useEffect(() => { setSkipAll(false); }, [gameStage]);
 
-  useEffect(() => { setSkipTyping(false); }, [step]);
-
-  // SCADA Timer
+  // --- ĐẾM NGƯỢC SCADA (P2) ---
   useEffect(() => {
     let timer = null;
-    if (step === 8 && timeLeft > 0 && !selectedEvidence) {
-      timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-    } else if (step === 8 && timeLeft <= 0) {
-      setStep(14);
+    // Đừng trừ giờ nếu user đang đọc tài liệu (activeDoc)
+    if (gameStage === 8 && scadaTimer > 0 && !activeDoc) {
+      timer = setInterval(() => setScadaTimer((prev) => prev - 1), 1000);
+    } else if (gameStage === 8 && scadaTimer <= 0) {
+      setGameStage(14); // Nổ hầm
     }
     return () => clearInterval(timer);
-  }, [step, timeLeft, selectedEvidence]);
+  }, [gameStage, scadaTimer, activeDoc]);
 
-  const formatTime = (seconds) => {
-    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
-    const s = (seconds % 60).toString().padStart(2, "0");
+  const formatTimer = (secs) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, "0");
+    const s = (secs % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   };
 
@@ -186,7 +195,9 @@ export default function Season2() {
     setTimeout(() => setter(false), 300);
   };
 
-  // --- NỘI DUNG VĂN BẢN ĐƯỢC CHUẨN HÓA 100% ---
+  // ==========================================
+  // 📚 TỪ ĐIỂN DATA (Giữ nguyên văn text cốt truyện)
+  // ==========================================
   const content = {
     vi: {
       langBtn: "LANG: [VI]",
@@ -287,7 +298,7 @@ export default function Season2() {
       p2TransitionDesc: "Mã Ghi đè: 572 được chấp nhận!\nHệ thống đèn giao thông nháy vàng thủ công. Rào chắn cơ học hạ xuống, dòng xe điên cuồng được ngăn lại. Thảm họa đã bị dập tắt.\n\nNhưng ngay khi cửa sổ lệnh đóng lại, thuật toán truy vết ngược (Reverse Traceroute) mà Holmes cài cắm suốt 7 năm qua cuối cùng cũng bắt được IP thực của Zodiac. Hắn đã sơ suất trong khoảnh khắc tức giận.\n\nTọa độ chỉ thẳng đến Hangar 04 (Nhà kho máy bay bỏ hoang) ở rìa sân bay quốc tế. Một chiếc phản lực đang làm nóng động cơ, sẵn sàng tẩu thoát đến quốc gia không có hiệp ước dẫn độ.\n\nKhông có thời gian đợi chi viện lớn. Holmes rút súng, ra hiệu cho Đội Đặc Nhiệm Alpha (gồm Đội trưởng Miller, Hayes và Ramirez) lập tức lên đường.",
       p2TransitionBtn: "[ TIẾN ĐÁNH HANGAR 04 ]",
 
-      // P3 - BOSS FIGHT (Logic mới: Prime Numbers)
+      // P3 - BOSS FIGHT 
       p3Title: "HỒI KẾT: CHUYẾN BAY CUỐI CÙNG",
       p3Subtitle: "[PHẦN 3: TỬ ĐỊA]",
       p3BriefingTitle: ">> ĐỘT KÍCH HANGAR 04 <<",
@@ -301,7 +312,7 @@ export default function Season2() {
       p3Submit: "[ NHẬP MÃ & MỞ CỬA ]",
 
       p3SacrificeTitle: ">> SỰ HY SINH CỦA MILLER <<",
-      p3SacrificeDesc: "Mật mã 1113 chính xác!\nNhưng bàn phím nằm ở khu vực trống trải. Cần một người làm mồi nhử hỏa lực, người còn lại chạy ra nhập mã.\n\nMiller nhìn Holmes, mỉm cười cay đắng: 'Thế giới này cần cái đầu của cậu hơn một lão già. Cậu đã sai một lần khi để mất gia đình 7 năm trước, đừng sai lầm thêm lần nào nữa.'\n\nKhông để Holmes kịp cản, Miller lao ra ngoài, xả súng trường liên tục để thu hút toàn bộ laser. Đạn găm vào người ông hết viên này đến viên khác, máu nhuộm đỏ quân phục, nhưng ông vẫn gầm lên: 'CHẠY ĐI, HOLMES!'\n\nHolmes trượt trên vũng máu, đập mạnh mật mã vào bàn phím và kéo cần gạt. Cửa hé mở. Nhưng Miller đã khụy xuống. Lão đội trưởng ấn nút Emergency Lockdown, nhốt mình lại cùng lũ quái vật cơ khí để bảo vệ Holmes.\n\nChỉ duy nhất Holmes lọt qua được khe cửa, lao ra ngoài đường băng...",
+      p3SacrificeDesc: "Mật mã 1113 chính xác!\nNhưng bàn phím nằm ở khu vực trống trải. Cần một người làm mồi nhử hỏa lực, người còn lại chạy ra nhập mã.\n\nMiller nhìn Holmes, mỉm cười cay đắng: 'Thế giới này cần trí thông minh và sự lập luận sắc bén của cậu hơn là một lão già chỉ biết chinh chiến như tôi. Cậu đã sai một lần khi để mất gia đình 7 năm trước, đừng sai lầm thêm lần nào nữa.'\n\nKhông để Holmes kịp cản, Miller lao ra ngoài, xả súng trường liên tục để thu hút toàn bộ laser. Đạn găm vào người ông hết viên này đến viên khác, máu nhuộm đỏ quân phục, nhưng ông vẫn gầm lên: 'CHẠY ĐI, HOLMES!'\n\nHolmes trượt trên vũng máu, đập mạnh mật mã vào bàn phím và kéo cần gạt. Cửa hé mở. Nhưng Miller đã khụy xuống. Lão đội trưởng ấn nút Emergency Lockdown, nhốt mình lại cùng lũ quái vật cơ khí để bảo vệ Holmes.\n\nChỉ duy nhất Holmes lọt qua được khe cửa, lao ra ngoài đường băng...",
       p3SacrificeBtn: "[ LAO RA ĐƯỜNG BĂNG ]",
 
       p3TarmacTitle: ">> BẢN ÁN DƯỚI MƯA <<",
@@ -436,20 +447,20 @@ export default function Season2() {
     }
   };
 
-  const t = content[lang];
+  const t = content[locale];
 
-  // --- BACKGROUND & THEME LOGIC ---
+  // --- BACKGROUND THEME ---
   const getBackgroundClass = () => {
-    if (step <= -1) return "bg-zinc-950";
-    if (step >= 19) return "bg-[url('/s2_boss_tarmac.png')]";
-    if (step >= 16) return "bg-[url('/s2_boss_hangar.png')]";
-    if (step === 9 || step === 6) return "bg-[url('/end2.png')]"; 
-    if (step >= 7 && step <= 14) return "bg-[url('/s2_scene2.png')]";
-    if (step >= 2 && step <= 5) return "bg-[url('/s2_scene1.png')]";
+    if (gameStage <= -1) return "bg-zinc-950";
+    if (gameStage >= 19) return "bg-[url('/s2_boss_tarmac.png')]";
+    if (gameStage >= 16) return "bg-[url('/s2_boss_hangar.png')]";
+    if (gameStage === 9 || gameStage === 6) return "bg-[url('/end2.png')]"; 
+    if (gameStage >= 7 && gameStage <= 14) return "bg-[url('/s2_scene2.png')]";
+    if (gameStage >= 2 && gameStage <= 5) return "bg-[url('/s2_scene1.png')]";
     return "bg-[url('/maskss2.png')]";
   };
 
-  const isBossFight = step >= 16;
+  const isBossFight = gameStage >= 16;
   const theme = {
     primaryText: isBossFight ? "text-amber-500" : "text-emerald-400",
     secondaryText: isBossFight ? "text-red-400" : "text-sky-400",
@@ -458,93 +469,115 @@ export default function Season2() {
     shadow: isBossFight ? "shadow-[0_0_40px_rgba(220,38,38,0.3)]" : "shadow-[0_0_40px_rgba(16,185,129,0.15)]"
   };
 
-  // --- LOGIC GAMEPLAY ---
-  const handleLogicP1Submit = (e) => {
+  // ==========================================
+  // 🧠 GAME LOGIC HANDLERS
+  // ==========================================
+  
+  // P1: Mã toàn vẹn (50139)
+  const verifyP1Code = (e) => {
     e.preventDefault();
-    const cleanAns = logicAnswer.replace(/\s+/g, "");
+    const cleanAns = ans_P1_code.replace(/\s+/g, "");
+    
     if (cleanAns === "50139") {
-      setStep(4);
-      setLogicError("");
-      setShakeP1(false);
+      setGameStage(4);
+      setErrAlertP1("");
+      setShake_P1(false);
     } else {
-      triggerShake(setShakeP1);
-      setStrikesP1(s => s - 1);
-      if (strikesP1 <= 1) setStep(5);
-      else {
-        const err = lang === "vi" ? `Mã kiểm tra tính toàn vẹn sai. Còn ${strikesP1 - 1} mạng.` : `Integrity check failed. ${strikesP1 - 1} strikes left.`;
-        setLogicError(err);
-        setTimeout(() => setLogicError(""), 5000);
-      }
+      triggerShake(setShake_P1);
+      let newHp = lives_P1 - 1;
+      setLives_P1(newHp);
+      
+      if (newHp <= 1) return setGameStage(5);
+      
+      const err = locale === "vi" ? `Mã kiểm tra tính toàn vẹn sai. Còn ${newHp - 1} mạng.` : `Integrity check failed. ${newHp - 1} strikes left.`;
+      setErrAlertP1(err);
+      setTimeout(() => setErrAlertP1(""), 5000);
     }
   };
 
-  const handleKeywordSubmit = (e) => {
+  // P1: Bắt Keyword
+  const checkFinalAnswerP1 = (e) => {
     e.preventDefault();
-    const str = keywordAnswer.toLowerCase().replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a").replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e").replace(/ì|í|ị|ỉ|ĩ/g, "i").replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o").replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, "u").replace(/ỳ|ý|ỵ|ỷ|ỹ/g, "y").replace(/đ/g, "d").replace(/\s+/g, "");
+    // Xóa dấu tiếng Việt, cái đống regex này cùi nhưng chạy được là OK =))
+    const str = ans_P1_final.toLowerCase()
+      .replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a")
+      .replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e")
+      .replace(/ì|í|ị|ỉ|ĩ/g, "i")
+      .replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o")
+      .replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, "u")
+      .replace(/ỳ|ý|ỵ|ỷ|ỹ/g, "y")
+      .replace(/đ/g, "d")
+      .replace(/\s+/g, "");
+      
     if (str.includes("mavach") || str.includes("barcode") || str.includes("checksum") || str.includes("kiemtra")) {
-      setStep(6);
-      setShakeP1(false);
+      setGameStage(6);
+      setShake_P1(false);
     } else {
-      triggerShake(setShakeP1);
-      setStrikesP1(s => s - 1);
-      if (strikesP1 <= 1) setStep(5);
-      else {
-        setLogicError(lang === "vi" ? `Câu trả lời sai! Còn ${strikesP1 - 1} mạng.` : `Wrong answer! ${strikesP1 - 1} strikes left.`);
-        setTimeout(() => setLogicError(""), 5000);
-      }
+      triggerShake(setShake_P1);
+      let newHp = lives_P1 - 1;
+      setLives_P1(newHp);
+      
+      if (newHp <= 1) return setGameStage(5);
+      
+      setErrAlertP1(locale === "vi" ? `Câu trả lời sai! Còn ${newHp - 1} mạng.` : `Wrong answer! ${newHp - 1} strikes left.`);
+      setTimeout(() => setErrAlertP1(""), 5000);
     }
   };
 
-  const handleScadaSubmit = (e) => {
+  // P2: SCADA (572)
+  const verifyP2Scada = (e) => {
     e.preventDefault();
-    const cleanAns = scadaAnswer.trim();
+    const cleanAns = ans_P2_override.trim();
     if (cleanAns === "572") {
-      setStep(12);
-      setShakeP2(false);
+      setGameStage(12);
+      setShake_P2(false);
     } else {
-      triggerShake(setShakeP2);
-      setStrikesP2(s => s - 1);
-      if (strikesP2 <= 1) setStep(13);
-      else {
-        setScadaError(lang === "vi" ? `Mã ghi đè sai! Còn ${strikesP2 - 1} mạng.` : `Override code incorrect! ${strikesP2 - 1} strikes left.`);
-        setTimeout(() => setScadaError(""), 5000);
-      }
+      triggerShake(setShake_P2);
+      let newHp = lives_P2 - 1;
+      setLives_P2(newHp);
+      
+      if (newHp <= 1) return setGameStage(13);
+      
+      setErrAlertP2(locale === "vi" ? `Mã ghi đè sai! Còn ${newHp - 1} mạng.` : `Override code incorrect! ${newHp - 1} strikes left.`);
+      setTimeout(() => setErrAlertP2(""), 5000);
     }
   };
 
-  const handleBossSubmit = (e) => {
+  // P3: Trận Boss (1113)
+  const defuseBossLock = (e) => {
     e.preventDefault();
-    const cleanAns = bossAnswer.trim();
-    // ĐÁP ÁN: 1113 (Hai số nguyên tố tiếp theo sau 2, 3, 5, 7)
+    const cleanAns = ans_P3_prime.trim();
     if (cleanAns === "1113") {
-      setStep(18); 
-      setShakeBoss(false);
+      setGameStage(18); 
+      setShake_Boss(false);
     } else {
-      triggerShake(setShakeBoss);
-      setStrikesBoss(s => s - 1);
-      if (strikesBoss <= 1) {
-        setStep(5); 
-      } else {
-        setBossError(lang === "vi" ? `Mã cửa sai! Làn đạn đang đến gần. Còn ${strikesBoss - 1} mạng.` : `Incorrect code! Fire incoming. ${strikesBoss - 1} strikes left.`);
-        setTimeout(() => setBossError(""), 5000);
-      }
+      triggerShake(setShake_Boss);
+      let newHp = lives_Boss - 1;
+      setLives_Boss(newHp);
+      
+      if (newHp <= 1) return setGameStage(5); 
+      
+      setErrAlertP3(locale === "vi" ? `Mã cửa sai! Làn đạn đang đến gần. Còn ${newHp - 1} mạng.` : `Incorrect code! Fire incoming. ${newHp - 1} strikes left.`);
+      setTimeout(() => setErrAlertP3(""), 5000);
     }
   };
 
-  // --- RENDER COMPONENTS ---
+  // ==========================================
+  // 🖥️ UI COMPONENTS 
+  // ==========================================
   const TopStatusBar = () => (
     <div className={`flex justify-between items-center w-full mb-6 pb-4 border-b ${theme.border} relative z-50`}>
       <div className="flex items-center gap-4">
         <span className={`text-xs font-mono ${theme.primaryText} tracking-widest animate-pulse`}>
           {isBossFight ? "[SURVIVAL_MODE_ACTIVE]" : "[HUD_v7.1_HOLMES_ACTIVE]"}
         </span>
-        <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }} className={`text-xs font-mono text-zinc-500 hover:${theme.primaryText} transition-all cursor-pointer border border-zinc-700 px-2 py-0.5 rounded`}>
-          {lang === "vi" ? `[ ÂM THANH: ${isMuted ? "TẮT" : "BẬT"} ]` : `[ SOUND: ${isMuted ? "OFF" : "ON"} ]`}
+        <button onClick={(e) => { e.stopPropagation(); setSoundOff(!soundOff); }} className={`text-xs font-mono text-zinc-500 hover:${theme.primaryText} transition-all cursor-pointer border border-zinc-700 px-2 py-0.5 rounded`}>
+          {locale === "vi" ? `[ ÂM THANH: ${soundOff ? "TẮT" : "BẬT"} ]` : `[ SOUND: ${soundOff ? "OFF" : "ON"} ]`}
         </button>
       </div>
       {isBossFight && (
-        <button onClick={(e) => { e.stopPropagation(); setLang(lang === "vi" ? "en" : "vi"); }} className="px-3 py-1 border border-zinc-800 bg-black hover:border-red-500 hover:text-red-400 text-xs font-mono rounded cursor-pointer text-zinc-500">
-          <TypewriterText text={t.langBtn} speed={30} skip={skipTyping} noCursor noGlow/>
+        <button onClick={(e) => { e.stopPropagation(); setLocale(locale === "vi" ? "en" : "vi"); }} className="px-3 py-1 border border-zinc-800 bg-black hover:border-red-500 hover:text-red-400 text-xs font-mono rounded cursor-pointer text-zinc-500">
+          <TerminalText text={t.langBtn} speed={30} skip={skipAll} noCursor noGlow/>
         </button>
       )}
     </div>
@@ -553,36 +586,46 @@ export default function Season2() {
   const CopyrightFooter = () => (
     <div className={`w-full mt-auto pt-6 border-t ${theme.border} text-center z-20 relative`}>
       <span className="text-xs font-mono text-zinc-600 tracking-widest uppercase">
-        <TypewriterText text={t.footer || ""} speed={20} delay={1000} skip={skipTyping} noCursor noGlow />
+        <TerminalText text={t.footer || ""} speed={20} delay={1000} skip={skipAll} noCursor noGlow />
       </span>
     </div>
   );
 
+  // TODO: Đoạn này sau này tách ra Component con cho gọn file
   const SlideInEvidencePanel = () => {
     if (isBossFight) return null;
     return (
       <>
-        <div className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-[90] transition-opacity duration-500 ${selectedEvidence ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setSelectedEvidence(null)}></div>
-        <div className={`fixed top-0 right-0 h-full w-full md:w-[450px] lg:w-[500px] bg-zinc-950/95 border-l border-emerald-600 shadow-[-20px_0_50px_rgba(16,185,129,0.2)] z-[100] transform transition-transform duration-500 ease-in-out overflow-y-auto ${selectedEvidence ? 'translate-x-0' : 'translate-x-full'}`}>
-          {selectedEvidence && (
+        {/* Nền xám đen mờ khi mở panel */}
+        <div className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-[90] transition-opacity duration-500 ${activeDoc ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setActiveDoc(null)}></div>
+        
+        <div className={`fixed top-0 right-0 h-full w-full md:w-[450px] lg:w-[500px] bg-zinc-950/95 border-l border-emerald-600 shadow-[-20px_0_50px_rgba(16,185,129,0.2)] z-[100] transform transition-transform duration-500 ease-in-out overflow-y-auto ${activeDoc ? 'translate-x-0' : 'translate-x-full'}`}>
+          {activeDoc && (
             <div className="p-8 flex flex-col h-full font-mono">
               <div className="flex justify-between items-center mb-8 border-b border-emerald-900/50 pb-4">
-                <h2 className="text-xl font-bold text-emerald-400 [text-shadow:0_0_8px_rgba(16,185,129,0.5)]"><TypewriterText text={selectedEvidence.title || ""} speed={20} /></h2>
-                <button onClick={() => setSelectedEvidence(null)} className="text-zinc-500 hover:text-emerald-300 text-2xl leading-none transition-colors">&times;</button>
+                <h2 className="text-xl font-bold text-emerald-400 [text-shadow:0_0_8px_rgba(16,185,129,0.5)]">
+                  <TerminalText text={activeDoc.title || ""} speed={20} />
+                </h2>
+                <button onClick={() => setActiveDoc(null)} className="text-zinc-500 hover:text-emerald-300 text-2xl leading-none transition-colors">&times;</button>
               </div>
-              {selectedEvidence.id === 3 && (
+              
+              {activeDoc.id === 3 && (
                 <div className="mb-6 w-full flex justify-center bg-black p-2 border border-emerald-900/60 rounded shadow-[inset_0_0_20px_rgba(16,185,129,0.2)]">
                   <img src="/barcode.png" alt="Medical Barcode Data" className="w-full h-auto object-cover rounded" />
                 </div>
               )}
-              {selectedEvidence.id === 201 && (
+              {activeDoc.id === 201 && (
                 <div className="mb-6 w-full flex justify-center bg-black p-2 border border-emerald-900/60 rounded shadow-[inset_0_0_20px_rgba(16,185,129,0.2)]">
                   <img src="/trafficlight.png" alt="Traffic Light Matrix" className="w-full h-auto object-cover rounded" />
                 </div>
               )}
-              <div className="text-zinc-300 text-sm leading-loose mb-8 flex-grow whitespace-pre-wrap"><TypewriterText text={selectedEvidence.detail || ""} speed={10} delay={200} noGlow /></div>
-              <button onClick={() => setSelectedEvidence(null)} className="mt-auto px-6 py-4 bg-emerald-900/20 border border-emerald-700 text-emerald-400 hover:bg-emerald-700 hover:text-black transition-all text-xs tracking-widest rounded cursor-pointer w-full">
-                {lang === "vi" ? "[ ĐÓNG NGĂN KÉO DỮ LIỆU ]" : "[ CLOSE DATA PANEL ]"}
+              
+              <div className="text-zinc-300 text-sm leading-loose mb-8 flex-grow whitespace-pre-wrap">
+                <TerminalText text={activeDoc.detail || ""} speed={10} delay={200} noGlow />
+              </div>
+              
+              <button onClick={() => setActiveDoc(null)} className="mt-auto px-6 py-4 bg-emerald-900/20 border border-emerald-700 text-emerald-400 hover:bg-emerald-700 hover:text-black transition-all text-xs tracking-widest rounded cursor-pointer w-full">
+                {locale === "vi" ? "[ ĐÓNG NGĂN KÉO DỮ LIỆU ]" : "[ CLOSE DATA PANEL ]"}
               </button>
             </div>
           )}
@@ -591,41 +634,46 @@ export default function Season2() {
     );
   };
 
-  // --- RENDER BƯỚC -3 ĐẾN 1 (BOOT SEQUENCE) ---
-  if (step === -3) {
+  // ==========================================
+  // 🎬 RENDER LOGIC CHÍNH
+  // ==========================================
+  if (gameStage === -3) {
     return (
-      <main onClick={() => { setIsMuted(false); setStep(-2); }} onTouchStart={() => { setIsMuted(false); setStep(-2); }} className="h-screen w-full bg-zinc-950 flex items-center justify-center cursor-pointer relative overflow-hidden">
+      <main onClick={() => { setSoundOff(false); setGameStage(-2); }} onTouchStart={() => { setSoundOff(false); setGameStage(-2); }} className="h-screen w-full bg-zinc-950 flex items-center justify-center cursor-pointer relative overflow-hidden">
          <div className="fixed inset-0 bg-[url('/maskss2.png')] bg-cover bg-center opacity-20 pointer-events-none filter grayscale"></div>
          <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-30"></div>
+         
+         {/* Hiệu ứng radar load data ảo ảo */}
          <div className="absolute w-64 h-64 border-[1px] border-emerald-600/30 rounded-full animate-[spin_4s_linear_infinite] flex items-center justify-center pointer-events-none">
            <div className="w-48 h-48 border-t-2 border-b-2 border-sky-500/50 rounded-full animate-[spin_2s_linear_infinite_reverse]"></div>
          </div>
+         
          <div className="text-emerald-400 font-mono tracking-widest animate-pulse text-sm text-center px-4 relative z-10 [text-shadow:0_0_10px_rgba(16,185,129,0.8)]">
-            {lang === "vi" ? "[ NHẤN ENTER HOẶC CHẠM ĐỂ KẾT NỐI ]" : "[ PRESS ENTER OR TAP TO CONNECT ]"}
+            {locale === "vi" ? "[ NHẤN ENTER HOẶC CHẠM ĐỂ KẾT NỐI ]" : "[ PRESS ENTER OR TAP TO CONNECT ]"}
          </div>
       </main>
     );
   }
 
-  if (step === -2) {
+  if (gameStage === -2) {
     return (
-      <main onClick={() => setSkipTyping(true)} className="min-h-screen w-full flex flex-col items-center justify-center bg-zinc-950 text-emerald-100 font-mono p-4 md:p-12 relative overflow-y-auto py-20">
+      <main onClick={() => setSkipAll(true)} className="min-h-screen w-full flex flex-col items-center justify-center bg-zinc-950 text-emerald-100 font-mono p-4 md:p-12 relative overflow-y-auto py-20">
         <div className="fixed inset-0 bg-[url('/maskss2.png')] bg-cover bg-center opacity-10 pointer-events-none filter grayscale"></div>
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-30"></div>
         <div className="absolute top-4 right-4 z-50">
-           <button onClick={(e) => { e.stopPropagation(); setLang(lang === "vi" ? "en" : "vi"); }} className="px-3 py-1.5 border border-emerald-900 bg-black hover:border-emerald-500 hover:text-emerald-400 transition-all cursor-pointer rounded text-xs font-mono text-zinc-500">
-             <TypewriterText text={t.langBtn || ""} speed={30} skip={skipTyping} noCursor noGlow/>
+           <button onClick={(e) => { e.stopPropagation(); setLocale(locale === "vi" ? "en" : "vi"); }} className="px-3 py-1.5 border border-emerald-900 bg-black hover:border-emerald-500 hover:text-emerald-400 transition-all cursor-pointer rounded text-xs font-mono text-zinc-500">
+             <TerminalText text={t.langBtn || ""} speed={30} skip={skipAll} noCursor noGlow/>
            </button>
         </div>
         <div className="max-w-4xl text-center space-y-8 z-10 relative mt-10">
            {t.cinematicLines.map((text, idx) => (
               <div key={idx} className="text-sm md:text-lg lg:text-xl tracking-widest leading-loose whitespace-pre-wrap">
-                <TypewriterText text={text || ""} speed={25} delay={1000 + idx * 4500} skip={skipTyping} noCursor noGlow />
+                <TerminalText text={text || ""} speed={25} delay={1000 + idx * 4500} skip={skipAll} noCursor noGlow />
               </div>
            ))}
            <div className="mt-16 pt-12 flex justify-center">
-             <button onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(-1); }} className="px-8 py-3 border border-emerald-800 text-emerald-500 hover:text-black hover:bg-emerald-500 transition-all font-mono text-xs tracking-widest rounded animate-pulse cursor-pointer relative z-50">
-               <TypewriterText text={lang === "vi" ? "[ TIẾP CẬN HỆ THỐNG ZODIAC ]" : "[ ACCESS ZODIAC SYSTEM ]"} delay={skipTyping ? 0 : 30000} skip={skipTyping} noCursor />
+             <button onClick={(e) => { e.stopPropagation(); setSkipAll(false); setGameStage(-1); }} className="px-8 py-3 border border-emerald-800 text-emerald-500 hover:text-black hover:bg-emerald-500 transition-all font-mono text-xs tracking-widest rounded animate-pulse cursor-pointer relative z-50">
+               <TerminalText text={locale === "vi" ? "[ TIẾP CẬN HỆ THỐNG ZODIAC ]" : "[ ACCESS ZODIAC SYSTEM ]"} delay={skipAll ? 0 : 30000} skip={skipAll} noCursor />
              </button>
            </div>
         </div>
@@ -633,20 +681,20 @@ export default function Season2() {
     );
   }
 
-  if (step === -1) {
+  if (gameStage === -1) {
     return (
-      <main onClick={() => setSkipTyping(true)} className="min-h-screen w-full bg-zinc-950 text-emerald-400 font-mono p-6 flex flex-col justify-center items-center relative overflow-y-auto">
+      <main onClick={() => setSkipAll(true)} className="min-h-screen w-full bg-zinc-950 text-emerald-400 font-mono p-6 flex flex-col justify-center items-center relative overflow-y-auto">
         <style dangerouslySetInnerHTML={{__html: `.crt-turn-on { animation: crtOn 1s ease-out forwards; } @keyframes crtOn { 0% { transform: scale(1, 0.01); opacity: 0; filter: brightness(10); } 40% { transform: scale(1, 0.01); opacity: 1; filter: brightness(5); } 100% { transform: scale(1, 1); opacity: 1; filter: brightness(1); } }`}} />
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-40"></div>
         <div className="max-w-2xl w-full z-10 crt-turn-on relative border border-emerald-900/30 p-10 bg-emerald-950/10 backdrop-blur-sm rounded">
           {t.bootTermLines.map((text, idx) => (
             <div key={idx} className={`mb-6 text-sm md:text-xl tracking-widest font-bold ${idx === 1 ? "text-amber-500 animate-pulse" : "text-emerald-400"}`}>
-              <TypewriterText text={text || ""} speed={20} delay={500 + idx * 1200} skip={skipTyping} noGlow={idx !== 1} />
+              <TerminalText text={text || ""} speed={20} delay={500 + idx * 1200} skip={skipAll} noGlow={idx !== 1} />
             </div>
           ))}
           <div className="mt-16 relative z-50">
-             <button onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(0); }} className="w-full py-4 border border-emerald-600 hover:bg-emerald-500 hover:text-black transition-all tracking-widest font-bold rounded shadow-[0_0_15px_rgba(16,185,129,0.3)] cursor-pointer">
-               <TypewriterText text={lang === "vi" ? "[ XÁC NHẬN BẢO MẬT & TRUY CẬP ]" : "[ CONFIRM SECURITY & ACCESS ]"} delay={skipTyping ? 0 : 7000} skip={skipTyping} noCursor />
+             <button onClick={(e) => { e.stopPropagation(); setSkipAll(false); setGameStage(0); }} className="w-full py-4 border border-emerald-600 hover:bg-emerald-500 hover:text-black transition-all tracking-widest font-bold rounded shadow-[0_0_15px_rgba(16,185,129,0.3)] cursor-pointer">
+               <TerminalText text={locale === "vi" ? "[ XÁC NHẬN BẢO MẬT & TRUY CẬP ]" : "[ CONFIRM SECURITY & ACCESS ]"} delay={skipAll ? 0 : 7000} skip={skipAll} noCursor />
              </button>
           </div>
         </div>
@@ -654,58 +702,59 @@ export default function Season2() {
     );
   }
 
-  if (step === 15) {
+  if (gameStage === 15) {
     return (
       <main className="h-screen w-full flex flex-col items-center justify-center bg-zinc-950 text-emerald-900 font-mono text-sm relative">
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-30"></div>
         <div className="animate-pulse mb-4 z-10 text-lg">SYSTEM OFFLINE.</div>
-        <div className="z-10">{lang === "vi" ? "BẠN CÓ THỂ ĐÓNG TAB TRÌNH DUYỆT NÀY." : "YOU MAY CLOSE THIS WINDOW."}</div>
+        <div className="z-10">{locale === "vi" ? "BẠN CÓ THỂ ĐÓNG TAB TRÌNH DUYỆT NÀY." : "YOU MAY CLOSE THIS WINDOW."}</div>
       </main>
     );
   }
 
-  if (step === 0 || step === 1) {
+  // BOOT SCREEN (0, 1)
+  if (gameStage === 0 || gameStage === 1) {
     return (
-      <main onClick={() => setSkipTyping(true)} className={`min-h-screen w-full overflow-y-auto overflow-x-hidden relative bg-[url('/maskss2.png')] bg-cover bg-center bg-fixed text-slate-100`}>
+      <main onClick={() => setSkipAll(true)} className={`min-h-screen w-full overflow-y-auto overflow-x-hidden relative bg-[url('/maskss2.png')] bg-cover bg-center bg-fixed text-slate-100`}>
         <div className="fixed inset-0 bg-zinc-950/85 z-0 pointer-events-none"></div>
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-30"></div>
         <div className="relative z-20 min-h-full flex flex-col p-4 md:p-8">
           <div className="w-full max-w-2xl mx-auto my-auto bg-black/80 border border-emerald-900/50 p-6 md:p-8 rounded shadow-[0_0_40px_rgba(16,185,129,0.15)] backdrop-blur-md">
             <div className="flex justify-between items-center w-full mb-8 pb-4 border-b border-emerald-900/50">
               <span className="text-xs font-mono text-emerald-500 tracking-widest animate-pulse">[SECURE_BOOT_v7.1.0]</span>
-              <button onClick={(e) => { e.stopPropagation(); setLang(lang === "vi" ? "en" : "vi"); }} className="px-3 py-1.5 border border-zinc-800 hover:border-emerald-500 text-xs font-mono rounded text-zinc-500 z-50">
-                <TypewriterText text={t.langBtn || ""} speed={30} skip={skipTyping} noCursor noGlow/>
+              <button onClick={(e) => { e.stopPropagation(); setLocale(locale === "vi" ? "en" : "vi"); }} className="px-3 py-1.5 border border-zinc-800 hover:border-emerald-500 text-xs font-mono rounded text-zinc-500 z-50">
+                <TerminalText text={t.langBtn || ""} speed={30} skip={skipAll} noCursor noGlow/>
               </button>
             </div>
-            {step === 0 ? (
+            {gameStage === 0 ? (
               <>
-                <h1 className="text-xl md:text-2xl font-bold font-mono text-sky-400 mb-4 border-b border-emerald-900/30 pb-2"><TypewriterText text={t.profTitle || ""} delay={200} skip={skipTyping} /></h1>
+                <h1 className="text-xl md:text-2xl font-bold font-mono text-sky-400 mb-4 border-b border-emerald-900/30 pb-2"><TerminalText text={t.profTitle || ""} delay={200} skip={skipAll} /></h1>
                 <div className="font-mono text-sm text-emerald-400 space-y-2 mb-8">
-                  <p><TypewriterText text={t.profLine1 || ""} delay={1000} skip={skipTyping} noGlow/></p>
-                  <p><TypewriterText text={t.profLine2 || ""} delay={1800} skip={skipTyping} noGlow/></p>
-                  <p><TypewriterText text={t.profLine3 || ""} delay={2800} skip={skipTyping} noGlow/></p>
+                  <p><TerminalText text={t.profLine1 || ""} delay={1000} skip={skipAll} noGlow/></p>
+                  <p><TerminalText text={t.profLine2 || ""} delay={1800} skip={skipAll} noGlow/></p>
+                  <p><TerminalText text={t.profLine3 || ""} delay={2800} skip={skipAll} noGlow/></p>
                 </div>
-                <h2 className="text-md font-bold font-mono text-sky-400 mb-4"><TypewriterText text={t.profHeader || ""} delay={3500} skip={skipTyping} /></h2>
+                <h2 className="text-md font-bold font-mono text-sky-400 mb-4"><TerminalText text={t.profHeader || ""} delay={3500} skip={skipAll} /></h2>
                 <div className="font-mono text-sm text-zinc-300 space-y-4 mb-10 leading-relaxed">
-                  <p><TypewriterText text={t.profP1 || ""} speed={10} delay={4500} skip={skipTyping} noGlow/></p>
-                  <p><TypewriterText text={t.profP2 || ""} speed={10} delay={6500} skip={skipTyping} noGlow/></p>
-                  <p><TypewriterText text={t.profP3 || ""} speed={10} delay={8500} skip={skipTyping} noGlow/></p>
+                  <p><TerminalText text={t.profP1 || ""} speed={10} delay={4500} skip={skipAll} noGlow/></p>
+                  <p><TerminalText text={t.profP2 || ""} speed={10} delay={6500} skip={skipAll} noGlow/></p>
+                  <p><TerminalText text={t.profP3 || ""} speed={10} delay={8500} skip={skipAll} noGlow/></p>
                 </div>
-                <button type="button" onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(1); }} className="w-full py-4 bg-emerald-900/20 border border-emerald-600 text-emerald-400 font-mono font-bold tracking-widest hover:bg-emerald-600 hover:text-black transition-all cursor-pointer rounded z-50">
-                  <TypewriterText text={t.profBtn || ""} delay={11000} skip={skipTyping} noCursor />
+                <button type="button" onClick={(e) => { e.stopPropagation(); setSkipAll(false); setGameStage(1); }} className="w-full py-4 bg-emerald-900/20 border border-emerald-600 text-emerald-400 font-mono font-bold tracking-widest hover:bg-emerald-600 hover:text-black transition-all cursor-pointer rounded z-50">
+                  <TerminalText text={t.profBtn || ""} delay={11000} skip={skipAll} noCursor />
                 </button>
               </>
             ) : (
               <>
-                <h1 className="text-xl md:text-2xl font-bold font-mono text-emerald-400 mb-2"><TypewriterText text={t.introTitle || ""} delay={200} skip={skipTyping} /></h1>
-                <p className="text-xs text-sky-400 font-mono mb-6 border-b border-emerald-900/30 pb-4"><TypewriterText text={t.introSub || ""} delay={800} skip={skipTyping} noGlow/></p>
+                <h1 className="text-xl md:text-2xl font-bold font-mono text-emerald-400 mb-2"><TerminalText text={t.introTitle || ""} delay={200} skip={skipAll} /></h1>
+                <p className="text-xs text-sky-400 font-mono mb-6 border-b border-emerald-900/30 pb-4"><TerminalText text={t.introSub || ""} delay={800} skip={skipAll} noGlow/></p>
                 <div className="bg-black p-4 rounded border border-emerald-900/50 font-mono text-xs text-zinc-400 space-y-3 mb-8 shadow-inner">
                   {t.bootLogs.map((log, idx) => (
-                    <div key={idx} className="flex items-start gap-2"><span className="text-emerald-500 mt-1">&gt;</span><p><TypewriterText text={log || ""} delay={1200 + (idx * 500)} skip={skipTyping} noGlow/></p></div>
+                    <div key={idx} className="flex items-start gap-2"><span className="text-emerald-500 mt-1">&gt;</span><p><TerminalText text={log || ""} delay={1200 + (idx * 500)} skip={skipAll} noGlow/></p></div>
                   ))}
                 </div>
-                <button type="button" onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(2); }} className="w-full py-4 bg-emerald-900/20 border border-emerald-600 text-emerald-400 font-mono font-bold hover:bg-emerald-600 hover:text-black transition-all cursor-pointer rounded z-50">
-                  <TypewriterText text={t.startButton || ""} delay={4000} skip={skipTyping} noCursor />
+                <button type="button" onClick={(e) => { e.stopPropagation(); setSkipAll(false); setGameStage(2); }} className="w-full py-4 bg-emerald-900/20 border border-emerald-600 text-emerald-400 font-mono font-bold hover:bg-emerald-600 hover:text-black transition-all cursor-pointer rounded z-50">
+                  <TerminalText text={t.startButton || ""} delay={4000} skip={skipAll} noCursor />
                 </button>
               </>
             )}
@@ -716,20 +765,18 @@ export default function Season2() {
     );
   }
 
-  // ==========================================
-  // BƯỚC GAME OVER CHUNG (5, 13, 14)
-  // ==========================================
-  if (step === 5 || step === 13 || step === 14) {
+  // --- CÁC MÀN GAME OVER CHUNG (5, 13, 14) ---
+  if (gameStage === 5 || gameStage === 13 || gameStage === 14) {
     let title = t.gameOverTitle;
     let desc = t.gameOverDesc;
     let btnText = t.rebootBtn;
     let action = () => window.location.reload();
 
-    if (step === 13 || step === 14) {
-      title = lang === "vi" ? "THẢM HỌA XẢY RA" : "DISASTER STRUCK";
-      desc = lang === "vi" ? "Hàng ngàn chiếc xe đã lao xuống hầm. Biển lửa thiêu rụi mọi thứ. Hệ thống tự động khôi phục lại thời điểm trước thảm họa." : "Thousands of cars rushed the tunnel. An inferno consumed everything. System restoring to before the disaster.";
-      btnText = lang === "vi" ? "[ QUAY LẠI MA TRẬN ĐÈN ĐỎ ]" : "[ RETURN TO GRIDLOCK ]";
-      action = () => { setStrikesP2(3); setScadaAnswer(""); setTimeLeft(300); setSkipTyping(false); setStep(7); };
+    if (gameStage === 13 || gameStage === 14) {
+      title = locale === "vi" ? "THẢM HỌA XẢY RA" : "DISASTER STRUCK";
+      desc = locale === "vi" ? "Hàng ngàn chiếc xe đã lao xuống hầm. Biển lửa thiêu rụi mọi thứ. Hệ thống tự động khôi phục lại thời điểm trước thảm họa." : "Thousands of cars rushed the tunnel. An inferno consumed everything. System restoring to before the disaster.";
+      btnText = locale === "vi" ? "[ QUAY LẠI MA TRẬN ĐÈN ĐỎ ]" : "[ RETURN TO GRIDLOCK ]";
+      action = () => { setLives_P2(3); setAns_P2_override(""); setScadaTimer(300); setSkipAll(false); setGameStage(7); };
     }
 
     return (
@@ -737,30 +784,28 @@ export default function Season2() {
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-40"></div>
         <div className="relative z-20 w-full max-w-lg mx-auto p-4 md:p-8 text-center">
           <h1 className="text-4xl font-bold text-amber-500 font-mono mb-6 animate-pulse [text-shadow:0_0_15px_rgba(245,158,11,0.8)]">{title}</h1>
-          <p className="text-zinc-400 font-mono mb-8 leading-relaxed"><TypewriterText text={desc || ""} speed={20} noGlow /></p>
-          <button onClick={action} className="px-6 py-3 border border-amber-600 text-amber-500 font-mono hover:bg-amber-600 hover:text-black transition-all rounded cursor-pointer z-50 relative"><TypewriterText text={btnText || ""} delay={1000} noCursor /></button>
+          <p className="text-zinc-400 font-mono mb-8 leading-relaxed"><TerminalText text={desc || ""} speed={20} noGlow /></p>
+          <button onClick={action} className="px-6 py-3 border border-amber-600 text-amber-500 font-mono hover:bg-amber-600 hover:text-black transition-all rounded cursor-pointer z-50 relative"><TerminalText text={btnText || ""} delay={1000} noCursor /></button>
         </div>
       </main>
     );
   }
 
-  // ==========================================
-  // BƯỚC VICTORY PART 1 (6) & CHUYỂN TIẾP (12)
-  // ==========================================
-  if (step === 6) {
+  // --- VICTORY P1 (6) & CHUYỂN TIẾP (12) ---
+  if (gameStage === 6) {
     return (
-      <main onClick={() => setSkipTyping(true)} className="min-h-screen w-full relative bg-[url('/end2.png')] bg-cover bg-center bg-fixed text-emerald-100">
+      <main onClick={() => setSkipAll(true)} className="min-h-screen w-full relative bg-[url('/end2.png')] bg-cover bg-center bg-fixed text-emerald-100">
         <div className="fixed inset-0 bg-zinc-950/85 z-0 pointer-events-none"></div>
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-40"></div>
         <style dangerouslySetInnerHTML={{__html: `.delayed-fade { animation: fadeIn 2s ease-in 7.5s forwards; opacity: 0; } @keyframes fadeIn { to { opacity: 1; } }`}} />
         <div className="relative z-20 min-h-full flex flex-col p-4 md:p-12">
           <div className="max-w-4xl mx-auto my-auto text-center flex flex-col items-center w-full">
-            <h1 className="text-3xl font-bold text-sky-400 font-mono mb-6 [text-shadow:0_0_15px_rgba(56,189,248,0.6)]"><TypewriterText text={t.victoryTitle || ""} speed={20} skip={skipTyping} /></h1>
+            <h1 className="text-3xl font-bold text-sky-400 font-mono mb-6 [text-shadow:0_0_15px_rgba(56,189,248,0.6)]"><TerminalText text={t.victoryTitle || ""} speed={20} skip={skipAll} /></h1>
             <div className="text-zinc-300 font-mono mb-10 leading-loose bg-black/80 p-6 md:p-10 border border-sky-900/50 rounded text-left whitespace-pre-wrap shadow-[0_0_30px_rgba(56,189,248,0.15)] w-full relative z-10">
-              <TypewriterText text={t.victoryDesc || ""} speed={10} delay={500} skip={skipTyping} noGlow />
+              <TerminalText text={t.victoryDesc || ""} speed={10} delay={500} skip={skipAll} noGlow />
             </div>
-            <button onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(7); }} className={`${skipTyping ? 'opacity-100' : 'delayed-fade'} px-8 py-4 bg-emerald-600 text-black font-bold font-mono tracking-widest hover:bg-emerald-500 transition-all cursor-pointer shadow-[0_0_20px_rgba(16,185,129,0.4)] rounded z-50 relative`}>
-              <TypewriterText text={t.unlockBtn || ""} delay={skipTyping ? 0 : 8500} skip={skipTyping} noCursor />
+            <button onClick={(e) => { e.stopPropagation(); setSkipAll(false); setGameStage(7); }} className={`${skipAll ? 'opacity-100' : 'delayed-fade'} px-8 py-4 bg-emerald-600 text-black font-bold font-mono tracking-widest hover:bg-emerald-500 transition-all cursor-pointer shadow-[0_0_20px_rgba(16,185,129,0.4)] rounded z-50 relative`}>
+              <TerminalText text={t.unlockBtn || ""} delay={skipAll ? 0 : 8500} skip={skipAll} noCursor />
             </button>
           </div>
           <CopyrightFooter />
@@ -769,20 +814,20 @@ export default function Season2() {
     );
   }
 
-  if (step === 12) {
+  if (gameStage === 12) {
     return (
-      <main onClick={() => setSkipTyping(true)} className={`min-h-screen w-full relative bg-[url('/s2_scene2.png')] bg-cover bg-center bg-fixed text-slate-100`}>
+      <main onClick={() => setSkipAll(true)} className={`min-h-screen w-full relative bg-[url('/s2_scene2.png')] bg-cover bg-center bg-fixed text-slate-100`}>
         <div className="fixed inset-0 bg-zinc-950/90 z-0 pointer-events-none"></div>
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-40"></div>
         <style dangerouslySetInnerHTML={{__html: `.delayed-fade-btns { animation: fadeIn 2s ease-in 10.5s forwards; opacity: 0; } @keyframes fadeIn { to { opacity: 1; } }`}} />
         <div className="relative z-20 min-h-full flex flex-col p-4 md:p-12">
           <div className="max-w-4xl mx-auto my-auto text-center flex flex-col items-center w-full">
-            <h1 className="text-3xl md:text-4xl font-bold text-red-500 font-mono mb-6 animate-pulse [text-shadow:0_0_20px_rgba(220,38,38,0.8)]"><TypewriterText text={t.p2TransitionTitle || ""} speed={20} skip={skipTyping} /></h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-red-500 font-mono mb-6 animate-pulse [text-shadow:0_0_20px_rgba(220,38,38,0.8)]"><TerminalText text={t.p2TransitionTitle || ""} speed={20} skip={skipAll} /></h1>
             <div className="text-zinc-300 font-mono mb-10 leading-loose bg-black/80 p-6 md:p-10 border border-red-900/60 rounded text-left whitespace-pre-wrap shadow-[0_0_30px_rgba(220,38,38,0.2)] backdrop-blur-md w-full relative z-10">
-              <TypewriterText text={t.p2TransitionDesc || ""} speed={10} delay={500} skip={skipTyping} noGlow />
+              <TerminalText text={t.p2TransitionDesc || ""} speed={10} delay={500} skip={skipAll} noGlow />
             </div>
-            <div className={`${skipTyping ? 'opacity-100' : 'delayed-fade-btns'} flex justify-center mt-6 w-full z-50 relative`}>
-              <button onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(16); }} className="px-8 py-4 bg-red-700 text-white font-bold font-mono hover:bg-red-600 transition-all rounded shadow-[0_0_30px_rgba(220,38,38,0.5)] cursor-pointer animate-pulse tracking-widest">
+            <div className={`${skipAll ? 'opacity-100' : 'delayed-fade-btns'} flex justify-center mt-6 w-full z-50 relative`}>
+              <button onClick={(e) => { e.stopPropagation(); setSkipAll(false); setGameStage(16); }} className="px-8 py-4 bg-red-700 text-white font-bold font-mono hover:bg-red-600 transition-all rounded shadow-[0_0_30px_rgba(220,38,38,0.5)] cursor-pointer animate-pulse tracking-widest">
                 {t.p2TransitionBtn}
               </button>
             </div>
@@ -793,14 +838,12 @@ export default function Season2() {
     );
   }
 
-  // ==========================================
-  // BƯỚC 16-20: BOSS FIGHT (HANGAR 04) - CÓ AUDIO & CUỘN CHUỘT CHUẨN
-  // ==========================================
+  // --- BƯỚC 16-20: BOSS FIGHT HANGAR 04 ---
   if (isBossFight) {
     return (
-      <main onClick={() => setSkipTyping(true)} className={`min-h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-amber-100 transition-all duration-1000 flex flex-col pb-20`}>
+      <main onClick={() => setSkipAll(true)} className={`min-h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-amber-100 transition-all duration-1000 flex flex-col pb-20`}>
         <div className="fixed inset-0 bg-black/80 z-0 pointer-events-none"></div>
-        <div className={`fixed inset-0 shadow-[inset_0_0_150px_rgba(220,38,38,0.5)] z-0 pointer-events-none ${step===17 ? 'animate-pulse' : ''}`}></div>
+        <div className={`fixed inset-0 shadow-[inset_0_0_150px_rgba(220,38,38,0.5)] z-0 pointer-events-none ${gameStage===17 ? 'animate-pulse' : ''}`}></div>
         <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
         <style dangerouslySetInnerHTML={{__html: `
           @keyframes mild-shake {
@@ -816,44 +859,44 @@ export default function Season2() {
         <div className="relative z-20 flex flex-col h-full min-h-screen p-4 md:p-8 max-w-[1200px] mx-auto w-full">
           <TopStatusBar />
           
-          <div className={`flex-1 flex flex-col items-center justify-start py-10 transition-transform ${shakeBoss ? 'animate-shake' : ''}`}>
+          <div className={`flex-1 flex flex-col items-center justify-start py-10 transition-transform ${shake_Boss ? 'animate-shake' : ''}`}>
             
-            {step === 16 && (
+            {gameStage === 16 && (
               <div className="w-full max-w-4xl bg-black/90 border border-red-900 p-8 rounded shadow-[0_0_50px_rgba(220,38,38,0.3)] backdrop-blur-md relative z-10 text-center my-auto">
                 <span className="text-xs tracking-widest text-red-500 font-mono block mb-2">{t.p3Subtitle}</span>
-                <h1 className="text-3xl font-bold font-mono text-amber-500 mb-8 [text-shadow:0_0_15px_rgba(245,158,11,0.6)]"><TypewriterText text={t.p3BriefingTitle || ""} speed={20} skip={skipTyping} /></h1>
+                <h1 className="text-3xl font-bold font-mono text-amber-500 mb-8 [text-shadow:0_0_15px_rgba(245,158,11,0.6)]"><TerminalText text={t.p3BriefingTitle || ""} speed={20} skip={skipAll} /></h1>
                 <div className="font-mono text-zinc-300 leading-loose mb-10 whitespace-pre-wrap text-left bg-black/50 p-6 rounded border border-red-900/30">
-                  <TypewriterText text={t.p3BriefingDesc || ""} speed={15} delay={500} skip={skipTyping} noGlow />
+                  <TerminalText text={t.p3BriefingDesc || ""} speed={15} delay={500} skip={skipAll} noGlow />
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(17); }} className="px-8 py-4 bg-red-700 text-white font-bold font-mono hover:bg-red-600 transition-all rounded shadow-[0_0_20px_rgba(220,38,38,0.5)] cursor-pointer tracking-widest animate-pulse w-full md:w-auto">
+                <button onClick={(e) => { e.stopPropagation(); setSkipAll(false); setGameStage(17); }} className="px-8 py-4 bg-red-700 text-white font-bold font-mono hover:bg-red-600 transition-all rounded shadow-[0_0_20px_rgba(220,38,38,0.5)] cursor-pointer tracking-widest animate-pulse w-full md:w-auto">
                   {t.p3BriefingBtn}
                 </button>
               </div>
             )}
 
-            {step === 17 && (
+            {gameStage === 17 && (
               <div className="w-full max-w-3xl bg-black/95 border-2 border-red-700 p-8 rounded shadow-[0_0_50px_rgba(220,38,38,0.5)] backdrop-blur-md relative z-10 my-auto">
-                <h2 className="text-2xl font-bold font-mono text-red-500 mb-6 [text-shadow:0_0_10px_rgba(220,38,38,0.8)] text-center"><TypewriterText text={t.p3SurvivalTitle || ""} speed={20} skip={skipTyping} /></h2>
+                <h2 className="text-2xl font-bold font-mono text-red-500 mb-6 [text-shadow:0_0_10px_rgba(220,38,38,0.8)] text-center"><TerminalText text={t.p3SurvivalTitle || ""} speed={20} skip={skipAll} /></h2>
                 
-                {bossError && (
+                {errAlertP3 && (
                   <div className="mb-6 p-4 bg-red-950/80 border border-red-500 text-red-400 font-mono text-sm text-center animate-pulse rounded">
-                    ⚠️ {bossError}
+                    ⚠️ {errAlertP3}
                   </div>
                 )}
 
                 <div className="font-mono text-zinc-400 leading-relaxed mb-6 whitespace-pre-wrap text-center px-4">
-                  <TypewriterText text={t.p3SurvivalDesc || ""} speed={15} delay={300} skip={skipTyping} noGlow />
+                  <TerminalText text={t.p3SurvivalDesc || ""} speed={15} delay={300} skip={skipAll} noGlow />
                 </div>
 
                 <div className="mb-8 bg-red-950/40 border border-red-900/80 p-6 rounded font-mono shadow-inner text-sm md:text-lg">
                   <div className="text-amber-500 font-bold whitespace-pre-wrap text-center leading-loose tracking-widest">
-                    <TypewriterText text={t.p3Gunfire || ""} speed={25} delay={2000} skip={skipTyping} noGlow />
+                    <TerminalText text={t.p3Gunfire || ""} speed={25} delay={2000} skip={skipAll} noGlow />
                   </div>
                 </div>
 
-                <form onSubmit={handleBossSubmit} className="flex flex-col mt-auto">
+                <form onSubmit={defuseBossLock} className="flex flex-col mt-auto">
                   <input 
-                    type="text" autoFocus value={bossAnswer} onChange={(e) => setBossAnswer(e.target.value)} placeholder={t.p3Placeholder}
+                    type="text" autoFocus value={ans_P3_prime} onChange={(e) => setAns_P3_prime(e.target.value)} placeholder={t.p3Placeholder}
                     onClick={(e) => e.stopPropagation()}
                     className="w-full bg-black border-2 border-red-900 focus:border-red-500 text-red-500 font-mono p-4 rounded outline-none transition-all text-center tracking-widest text-2xl shadow-inner mb-4"
                   />
@@ -864,58 +907,56 @@ export default function Season2() {
               </div>
             )}
 
-            {step === 18 && (
+            {gameStage === 18 && (
               <div className="w-full max-w-4xl bg-black/90 border border-amber-600 p-8 rounded shadow-[0_0_50px_rgba(245,158,11,0.2)] backdrop-blur-md relative z-10 text-center my-auto">
-                <h1 className="text-3xl font-bold font-mono text-amber-500 mb-8 [text-shadow:0_0_15px_rgba(245,158,11,0.6)]"><TypewriterText text={t.p3SacrificeTitle || ""} speed={20} skip={skipTyping} /></h1>
+                <h1 className="text-3xl font-bold font-mono text-amber-500 mb-8 [text-shadow:0_0_15px_rgba(245,158,11,0.6)]"><TerminalText text={t.p3SacrificeTitle || ""} speed={20} skip={skipAll} /></h1>
                 <div className="font-mono text-zinc-300 leading-loose mb-10 whitespace-pre-wrap text-left bg-black/50 p-6 rounded border border-amber-900/30">
-                  <TypewriterText text={t.p3SacrificeDesc || ""} speed={15} delay={500} skip={skipTyping} noGlow />
+                  <TerminalText text={t.p3SacrificeDesc || ""} speed={15} delay={500} skip={skipAll} noGlow />
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(19); }} className={`${skipTyping ? 'opacity-100' : 'delayed-fade'} px-8 py-4 bg-amber-600 text-black font-bold font-mono hover:bg-amber-500 transition-all rounded shadow-[0_0_20px_rgba(245,158,11,0.5)] cursor-pointer tracking-widest animate-pulse w-full md:w-auto`}>
-                  <TypewriterText text={t.p3SacrificeBtn || ""} delay={skipTyping ? 0 : 7000} skip={skipTyping} noCursor />
+                <button onClick={(e) => { e.stopPropagation(); setSkipAll(false); setGameStage(19); }} className={`${skipAll ? 'opacity-100' : 'delayed-fade'} px-8 py-4 bg-amber-600 text-black font-bold font-mono hover:bg-amber-500 transition-all rounded shadow-[0_0_20px_rgba(245,158,11,0.5)] cursor-pointer tracking-widest animate-pulse w-full md:w-auto`}>
+                  <TerminalText text={t.p3SacrificeBtn || ""} delay={skipAll ? 0 : 7000} skip={skipAll} noCursor />
                 </button>
               </div>
             )}
 
-            {step === 19 && (
+            {gameStage === 19 && (
               <div className="w-full max-w-4xl bg-black/80 border border-zinc-700 p-8 rounded shadow-2xl backdrop-blur-md relative z-10 text-center my-auto mt-10">
-                <h1 className="text-3xl font-bold font-mono text-sky-400 mb-8 [text-shadow:0_0_15px_rgba(56,189,248,0.6)]"><TypewriterText text={t.p3TarmacTitle || ""} speed={20} skip={skipTyping} /></h1>
+                <h1 className="text-3xl font-bold font-mono text-sky-400 mb-8 [text-shadow:0_0_15px_rgba(56,189,248,0.6)]"><TerminalText text={t.p3TarmacTitle || ""} speed={20} skip={skipAll} /></h1>
                 <div className="font-mono text-zinc-300 leading-loose mb-10 whitespace-pre-wrap text-left p-6">
-                  <TypewriterText text={t.p3TarmacDesc || ""} speed={15} delay={500} skip={skipTyping} noGlow />
+                  <TerminalText text={t.p3TarmacDesc || ""} speed={15} delay={500} skip={skipAll} noGlow />
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(20); }} className={`${skipTyping ? 'opacity-100' : 'delayed-fade'} px-10 py-5 bg-red-700 text-white font-bold font-mono hover:bg-red-600 transition-all rounded shadow-[0_0_30px_rgba(220,38,38,0.8)] cursor-pointer tracking-widest text-lg w-full md:w-auto`}>
-                  <TypewriterText text={t.p3TarmacBtn || ""} delay={skipTyping ? 0 : 8000} skip={skipTyping} noCursor />
+                <button onClick={(e) => { e.stopPropagation(); setSkipAll(false); setGameStage(20); }} className={`${skipAll ? 'opacity-100' : 'delayed-fade'} px-10 py-5 bg-red-700 text-white font-bold font-mono hover:bg-red-600 transition-all rounded shadow-[0_0_30px_rgba(220,38,38,0.8)] cursor-pointer tracking-widest text-lg w-full md:w-auto`}>
+                  <TerminalText text={t.p3TarmacBtn || ""} delay={skipAll ? 0 : 8000} skip={skipAll} noCursor />
                 </button>
               </div>
             )}
 
-            {step === 20 && (
+            {gameStage === 20 && (
               <div className="w-full max-w-4xl mx-auto text-center flex flex-col items-center my-auto mt-10">
-                <h1 className="text-3xl md:text-5xl font-bold text-red-600 font-mono mb-8 [text-shadow:0_0_20px_rgba(220,38,38,0.8)]"><TypewriterText text={t.p3EndingTitle || ""} speed={25} skip={skipTyping} /></h1>
+                <h1 className="text-3xl md:text-5xl font-bold text-red-600 font-mono mb-8 [text-shadow:0_0_20px_rgba(220,38,38,0.8)]"><TerminalText text={t.p3EndingTitle || ""} speed={25} skip={skipAll} /></h1>
                 <div className="text-zinc-300 font-mono mb-12 leading-loose bg-black/90 p-8 md:p-12 border border-zinc-800 rounded text-left whitespace-pre-wrap shadow-2xl backdrop-blur-md w-full relative z-10">
-                  <TypewriterText text={t.p3EndingDesc || ""} speed={15} delay={1000} skip={skipTyping} noGlow />
+                  <TerminalText text={t.p3EndingDesc || ""} speed={15} delay={1000} skip={skipAll} noGlow />
                 </div>
                 <div className="text-zinc-500 font-mono tracking-widest text-sm md:text-base mb-12">
-                  <TypewriterText text={t.p3EndingFooter || ""} speed={30} delay={skipTyping ? 0 : 12000} skip={skipTyping} />
+                  <TerminalText text={t.p3EndingFooter || ""} speed={30} delay={skipAll ? 0 : 12000} skip={skipAll} />
                 </div>
                 
-                <div className={`${skipTyping ? 'opacity-100' : 'delayed-fade'} flex flex-col md:flex-row justify-center gap-4 w-full z-50 relative`}>
-                  <button onClick={(e) => { e.stopPropagation(); setStep(-2); window.scrollTo(0, 0); }} className="px-6 py-4 bg-zinc-900 border border-zinc-700 text-zinc-400 font-bold font-mono hover:text-white hover:bg-zinc-800 transition-all rounded cursor-pointer">{t.btnReturnS2}</button>
-                  <button onClick={(e) => { e.stopPropagation(); setStep(16); window.scrollTo(0, 0); }} className="px-6 py-4 bg-red-900/20 border border-red-700 text-red-500 font-bold font-mono hover:bg-red-700 hover:text-white transition-all rounded cursor-pointer">{t.btnReplayBoss}</button>
-                  <button onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(15); }} className="px-6 py-4 bg-black border border-zinc-800 text-zinc-600 font-bold font-mono hover:bg-zinc-800 hover:text-white transition-all rounded cursor-pointer">{t.btnShutdown}</button>
+                <div className={`${skipAll ? 'opacity-100' : 'delayed-fade'} flex flex-col md:flex-row justify-center gap-4 w-full z-50 relative`}>
+                  <button onClick={(e) => { e.stopPropagation(); setGameStage(-2); window.scrollTo(0, 0); }} className="px-6 py-4 bg-zinc-900 border border-zinc-700 text-zinc-400 font-bold font-mono hover:text-white hover:bg-zinc-800 transition-all rounded cursor-pointer">{t.btnReturnS2}</button>
+                  <button onClick={(e) => { e.stopPropagation(); setGameStage(16); window.scrollTo(0, 0); }} className="px-6 py-4 bg-red-900/20 border border-red-700 text-red-500 font-bold font-mono hover:bg-red-700 hover:text-white transition-all rounded cursor-pointer">{t.btnReplayBoss}</button>
+                  <button onClick={(e) => { e.stopPropagation(); setSkipAll(false); setGameStage(15); }} className="px-6 py-4 bg-black border border-zinc-800 text-zinc-600 font-bold font-mono hover:bg-zinc-800 hover:text-white transition-all rounded cursor-pointer">{t.btnShutdown}</button>
                 </div>
               </div>
             )}
           </div>
-
           <CopyrightFooter />
         </div>
       </main>
     );
   }
 
-// ==========================================
+  // ==========================================
   // DASHBOARD CHÍNH (Bước 2,3,4 và 7,8) (P1 & P2)
-  // ĐÃ FIX LỖI SCROLL TRÊN ĐIỆN THOẠI
   // ==========================================
   const customStyles = `
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
@@ -930,7 +971,7 @@ export default function Season2() {
   `;
 
   return (
-    <main onClick={() => setSkipTyping(true)} className={`min-h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-emerald-100 transition-all duration-1000 flex flex-col pb-10`}>
+    <main onClick={() => setSkipAll(true)} className={`min-h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-emerald-100 transition-all duration-1000 flex flex-col pb-10`}>
       <style dangerouslySetInnerHTML={{__html: customStyles}} />
       <div className="fixed inset-0 bg-zinc-950/85 z-0 pointer-events-none"></div>
       <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-40"></div>
@@ -941,45 +982,45 @@ export default function Season2() {
         <header className={`flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b ${theme.border} pb-4 shrink-0`}>
           <div>
             <span className={`text-xs tracking-widest ${theme.secondaryText} font-mono`}>
-              <TypewriterText text={step >= 7 ? t.p2Subtitle : t.subtitle} speed={20} skip={skipTyping} noGlow />
+              <TerminalText text={gameStage >= 7 ? t.p2Subtitle : t.subtitle} speed={20} skip={skipAll} noGlow />
             </span>
             <h1 className={`text-2xl md:text-3xl font-bold font-mono tracking-wider mt-1 ${theme.primaryText} [text-shadow:0_0_10px_rgba(16,185,129,0.5)]`}>
-              <TypewriterText text={step >= 7 ? t.p2Title : t.title} speed={25} delay={300} skip={skipTyping} />
+              <TerminalText text={gameStage >= 7 ? t.p2Title : t.title} speed={25} delay={300} skip={skipAll} />
             </h1>
           </div>
           <div className="flex gap-4 mt-4 md:mt-0 z-50">
-             <button onClick={(e) => { e.stopPropagation(); setStep(0); }} className={`px-4 py-2 border border-zinc-800 bg-black hover:${theme.borderActive} hover:${theme.primaryText} text-xs font-mono rounded cursor-pointer`}>{t.exitBtn}</button>
-             <button onClick={(e) => { e.stopPropagation(); setLang(lang === "vi" ? "en" : "vi"); }} className={`px-4 py-2 border border-zinc-800 bg-black hover:border-sky-500 hover:text-sky-400 text-xs font-mono rounded cursor-pointer`}>{t.langBtn}</button>
+             <button onClick={(e) => { e.stopPropagation(); setGameStage(0); }} className={`px-4 py-2 border border-zinc-800 bg-black hover:${theme.borderActive} hover:${theme.primaryText} text-xs font-mono rounded cursor-pointer`}>{t.exitBtn}</button>
+             <button onClick={(e) => { e.stopPropagation(); setLocale(locale === "vi" ? "en" : "vi"); }} className={`px-4 py-2 border border-zinc-800 bg-black hover:border-sky-500 hover:text-sky-400 text-xs font-mono rounded cursor-pointer`}>{t.langBtn}</button>
           </div>
         </header>
 
-        {(step === 3 || step === 4 || step === 8) ? (
+        {(gameStage === 3 || gameStage === 4 || gameStage === 8) ? (
           <div className="flex-1 flex flex-col items-center justify-center p-4">
-            <div className={`w-full max-w-3xl bg-black/80 border-2 ${step === 8 ? 'border-amber-500 shadow-[0_0_40px_rgba(245,158,11,0.2)]' : 'border-emerald-600 shadow-[0_0_40px_rgba(16,185,129,0.2)]'} p-8 rounded backdrop-blur-md relative z-10 transition-transform ${((step===3||step===4)&&shakeP1) || (step===8&&shakeP2) ? 'animate-shake' : ''}`}>
+            <div className={`w-full max-w-3xl bg-black/80 border-2 ${gameStage === 8 ? 'border-amber-500 shadow-[0_0_40px_rgba(245,158,11,0.2)]' : 'border-emerald-600 shadow-[0_0_40px_rgba(16,185,129,0.2)]'} p-8 rounded backdrop-blur-md relative z-10 transition-transform ${((gameStage===3||gameStage===4)&&shake_P1) || (gameStage===8&&shake_P2) ? 'animate-shake' : ''}`}>
               <div className="flex justify-between items-center mb-6">
-                <h2 className={`text-xl font-bold font-mono ${step === 8 ? 'text-amber-500' : 'text-sky-400'}`}>
-                  <TypewriterText text={step === 8 ? t.p2TerminalTitle : (step === 4 ? t.conclusionTitle : t.p1BoardTitle)} speed={20} skip={skipTyping} />
+                <h2 className={`text-xl font-bold font-mono ${gameStage === 8 ? 'text-amber-500' : 'text-sky-400'}`}>
+                  <TerminalText text={gameStage === 8 ? t.p2TerminalTitle : (gameStage === 4 ? t.conclusionTitle : t.p1BoardTitle)} speed={20} skip={skipAll} />
                 </h2>
-                {step === 8 && (
-                  <div className={`text-4xl font-bold font-mono bg-black px-4 py-2 rounded border ${timeLeft <= 60 ? 'text-red-500 border-red-500 animate-pulse' : 'text-amber-500 border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]'}`}>
-                    [ {formatTime(timeLeft)} ]
+                {gameStage === 8 && (
+                  <div className={`text-4xl font-bold font-mono bg-black px-4 py-2 rounded border ${scadaTimer <= 60 ? 'text-red-500 border-red-500 animate-pulse' : 'text-amber-500 border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]'}`}>
+                    [ {formatTimer(scadaTimer)} ]
                   </div>
                 )}
               </div>
               
-              {((step===3||step===4)&&logicError) || (step===8&&scadaError) ? (
+              {((gameStage===3||gameStage===4)&&errAlertP1) || (gameStage===8&&errAlertP2) ? (
                 <div className="mb-6 p-4 bg-red-950/50 border border-red-500 text-red-400 font-mono text-sm text-center animate-pulse rounded">
-                  ⚠️ {(step===3||step===4) ? logicError : scadaError}
+                  ⚠️ {(gameStage===3||gameStage===4) ? errAlertP1 : errAlertP2}
                 </div>
               ) : null}
 
               <div className="font-mono text-zinc-300 leading-loose mb-8 whitespace-pre-wrap flex-grow">
-                <TypewriterText text={step === 8 ? t.p2TerminalDesc : (step === 4 ? t.conclusionText : t.p1BoardDesc)} speed={15} delay={300} skip={skipTyping} noGlow />
+                <TerminalText text={gameStage === 8 ? t.p2TerminalDesc : (gameStage === 4 ? t.conclusionText : t.p1BoardDesc)} speed={15} delay={300} skip={skipAll} noGlow />
               </div>
 
-              {step === 8 && (
+              {gameStage === 8 && (
                 <div className="mb-8 bg-black/60 border border-amber-900/60 p-6 rounded font-mono shadow-inner text-sm md:text-base">
-                  <p className="text-zinc-400 font-bold mb-4 tracking-wider text-center">{lang === "vi" ? "📋 BẢNG THAM CHIẾU NHỊ PHÂN CƠ BẢN:" : "📋 BASIC BINARY REFERENCE:"}</p>
+                  <p className="text-zinc-400 font-bold mb-4 tracking-wider text-center">{locale === "vi" ? "📋 BẢNG THAM CHIẾU NHỊ PHÂN CƠ BẢN:" : "📋 BASIC BINARY REFERENCE:"}</p>
                   <div className="flex justify-around text-amber-500 font-bold">
                     <span>000 = 0</span><span>001 = 1</span><span>010 = 2</span><span>011 = 3</span>
                   </div>
@@ -989,21 +1030,21 @@ export default function Season2() {
                 </div>
               )}
 
-              <form onSubmit={step === 8 ? handleScadaSubmit : (step === 4 ? handleKeywordSubmit : handleLogicP1Submit)} className="flex flex-col mt-auto">
+              <form onSubmit={gameStage === 8 ? verifyP2Scada : (gameStage === 4 ? checkFinalAnswerP1 : verifyP1Code)} className="flex flex-col mt-auto">
                 <input 
                   type="text" autoFocus 
-                  value={step === 8 ? scadaAnswer : (step === 4 ? keywordAnswer : logicAnswer)} 
-                  onChange={(e) => step === 8 ? setScadaAnswer(e.target.value) : (step === 4 ? setKeywordAnswer(e.target.value) : setLogicAnswer(e.target.value))} 
-                  placeholder={step === 8 ? t.p2Placeholder : (step === 4 ? t.placeholder : t.p1BoardPlaceholder)}
+                  value={gameStage === 8 ? ans_P2_override : (gameStage === 4 ? ans_P1_final : ans_P1_code)} 
+                  onChange={(e) => gameStage === 8 ? setAns_P2_override(e.target.value) : (gameStage === 4 ? setAns_P1_final(e.target.value) : setAns_P1_code(e.target.value))} 
+                  placeholder={gameStage === 8 ? t.p2Placeholder : (gameStage === 4 ? t.placeholder : t.p1BoardPlaceholder)}
                   onClick={(e) => e.stopPropagation()}
-                  className={`w-full bg-black border-2 border-zinc-800 ${step===8?'focus:border-amber-500 text-amber-500':'focus:border-emerald-500 text-emerald-400'} font-mono p-4 rounded outline-none transition-all text-center tracking-widest text-lg md:text-2xl shadow-inner uppercase mb-4`}
+                  className={`w-full bg-black border-2 border-zinc-800 ${gameStage===8?'focus:border-amber-500 text-amber-500':'focus:border-emerald-500 text-emerald-400'} font-mono p-4 rounded outline-none transition-all text-center tracking-widest text-lg md:text-2xl shadow-inner uppercase mb-4`}
                 />
                 <div className="flex flex-col md:flex-row gap-4">
-                  <button type="button" onClick={(e) => { e.stopPropagation(); setStep(step === 8 ? 7 : 2); }} className={`w-full md:w-1/3 px-4 py-4 bg-black border border-zinc-800 text-zinc-500 font-bold font-mono hover:${theme.secondaryText} hover:${theme.borderActive} transition-all cursor-pointer rounded tracking-widest text-center shadow-inner`}>
-                    <TypewriterText text={t.backToDocsBtn} speed={30} skip={skipTyping} noCursor noGlow />
+                  <button type="button" onClick={(e) => { e.stopPropagation(); setGameStage(gameStage === 8 ? 7 : 2); }} className={`w-full md:w-1/3 px-4 py-4 bg-black border border-zinc-800 text-zinc-500 font-bold font-mono hover:${theme.secondaryText} hover:${theme.borderActive} transition-all cursor-pointer rounded tracking-widest text-center shadow-inner`}>
+                    <TerminalText text={t.backToDocsBtn} speed={30} skip={skipAll} noCursor noGlow />
                   </button>
-                  <button type="submit" onClick={(e) => e.stopPropagation()} className={`w-full md:w-2/3 px-4 py-4 ${step===8 ? 'bg-amber-600 hover:bg-amber-500 text-black' : 'bg-emerald-600 hover:bg-emerald-500 text-black'} font-bold font-mono transition-all cursor-pointer rounded tracking-widest`}>
-                    {step === 8 ? t.p2Submit : (step === 4 ? t.submitBtn : t.p1BoardSubmit)}
+                  <button type="submit" onClick={(e) => e.stopPropagation()} className={`w-full md:w-2/3 px-4 py-4 ${gameStage===8 ? 'bg-amber-600 hover:bg-amber-500 text-black' : 'bg-emerald-600 hover:bg-emerald-500 text-black'} font-bold font-mono transition-all cursor-pointer rounded tracking-widest`}>
+                    {gameStage === 8 ? t.p2Submit : (gameStage === 4 ? t.submitBtn : t.p1BoardSubmit)}
                   </button>
                 </div>
               </form>
@@ -1013,13 +1054,13 @@ export default function Season2() {
           <div className="flex-1 flex flex-col lg:flex-row gap-6 relative z-10 pb-20">
             <div className={`w-full lg:w-1/3 flex flex-col bg-black/50 border ${theme.border} rounded-lg p-6 h-fit shadow-inner backdrop-blur-sm`}>
               <h2 className={`text-md font-bold font-mono ${theme.secondaryText} mb-4 border-b ${theme.border} pb-2 flex items-center gap-2`}>
-                <span className={`w-2 h-2 rounded-full ${step >= 7 ? 'bg-amber-500' : 'bg-emerald-500'} animate-ping`}></span>
-                <TypewriterText text={step >= 7 ? t.p2BriefingTitle : t.briefingTitle} speed={20} delay={500} skip={skipTyping} noGlow />
+                <span className={`w-2 h-2 rounded-full ${gameStage >= 7 ? 'bg-amber-500' : 'bg-emerald-500'} animate-ping`}></span>
+                <TerminalText text={gameStage >= 7 ? t.p2BriefingTitle : t.briefingTitle} speed={20} delay={500} skip={skipAll} noGlow />
               </h2>
               <div className="font-mono text-sm text-zinc-300 space-y-4 whitespace-pre-wrap pb-4">
-                {(step >= 7 ? t.p2BriefingLines : t.briefingLines).map((line, idx) => (
-                  <p key={idx} className={`border-l-2 ${step >= 7 ? 'border-amber-800' : 'border-emerald-800'} pl-3`}>
-                    <TypewriterText text={line} speed={10} delay={1000 + (idx * 1200)} skip={skipTyping} noCursor={idx !== (step >= 7 ? t.p2BriefingLines : t.briefingLines).length - 1} noGlow />
+                {(gameStage >= 7 ? t.p2BriefingLines : t.briefingLines).map((line, idx) => (
+                  <p key={idx} className={`border-l-2 ${gameStage >= 7 ? 'border-amber-800' : 'border-emerald-800'} pl-3`}>
+                    <TerminalText text={line} speed={10} delay={1000 + (idx * 1200)} skip={skipAll} noCursor={idx !== (gameStage >= 7 ? t.p2BriefingLines : t.briefingLines).length - 1} noGlow />
                   </p>
                 ))}
               </div>
@@ -1027,23 +1068,23 @@ export default function Season2() {
 
             <div className="w-full lg:w-2/3 flex flex-col gap-6 h-fit">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(step >= 7 ? t.p2Cards : t.cards).map((card, index) => {
+                {(gameStage >= 7 ? t.p2Cards : t.cards).map((card, index) => {
                   const baseDelay = 4500 + (index * 600);
                   return (
                     <div 
                       key={card.id} 
-                      onClick={(e) => { e.stopPropagation(); setSelectedEvidence(card); }}
+                      onClick={(e) => { e.stopPropagation(); setActiveDoc(card); }}
                       className={`p-5 bg-zinc-950/70 border border-zinc-800/50 rounded-lg shadow-md backdrop-blur-sm flex flex-col hover:${theme.borderActive} hover:bg-zinc-900 transition-all cursor-pointer group`}
                     >
                       <div className={`flex justify-between items-start mb-3 border-b ${theme.border} pb-2`}>
-                        <span className={`text-xs font-mono font-bold ${theme.primaryText}`}><TypewriterText text={card.title} speed={15} delay={baseDelay} skip={skipTyping} noGlow /></span>
-                        <span className={`text-[10px] font-mono ${theme.secondaryText} bg-black px-2 py-0.5 rounded border border-zinc-800`}><TypewriterText text={card.tag} speed={15} delay={baseDelay} skip={skipTyping} noGlow /></span>
+                        <span className={`text-xs font-mono font-bold ${theme.primaryText}`}><TerminalText text={card.title} speed={15} delay={baseDelay} skip={skipAll} noGlow /></span>
+                        <span className={`text-[10px] font-mono ${theme.secondaryText} bg-black px-2 py-0.5 rounded border border-zinc-800`}><TerminalText text={card.tag} speed={15} delay={baseDelay} skip={skipAll} noGlow /></span>
                       </div>
                       <div className="text-zinc-400 text-xs md:text-sm leading-relaxed flex-grow mb-3">
-                        <TypewriterText text={card.desc} speed={10} delay={baseDelay + 300} skip={skipTyping} noGlow />
+                        <TerminalText text={card.desc} speed={10} delay={baseDelay + 300} skip={skipAll} noGlow />
                       </div>
                       <div className={`text-xs text-zinc-500 font-mono mt-auto group-hover:${theme.primaryText} transition-colors`}>
-                        {lang === "vi" ? ">> TRÍCH XUẤT DỮ LIỆU <<" : ">> EXTRACT DATA <<"}
+                        {locale === "vi" ? ">> TRÍCH XUẤT DỮ LIỆU <<" : ">> EXTRACT DATA <<"}
                       </div>
                     </div>
                   );
@@ -1052,10 +1093,10 @@ export default function Season2() {
 
               <div className="mt-auto pt-4 flex justify-end">
                 <button 
-                  onClick={(e) => { e.stopPropagation(); setSkipTyping(false); setStep(step >= 7 ? 8 : 3); }}
-                  className={`px-8 py-4 ${step >= 7 ? 'bg-amber-600 hover:bg-amber-500 text-black' : 'bg-emerald-600 hover:bg-emerald-500 text-black'} font-bold font-mono tracking-widest text-sm rounded transition-all cursor-pointer w-full md:w-auto animate-pulse`}
+                  onClick={(e) => { e.stopPropagation(); setSkipAll(false); setGameStage(gameStage >= 7 ? 8 : 3); }}
+                  className={`px-8 py-4 ${gameStage >= 7 ? 'bg-amber-600 hover:bg-amber-500 text-black' : 'bg-emerald-600 hover:bg-emerald-500 text-black'} font-bold font-mono tracking-widest text-sm rounded transition-all cursor-pointer w-full md:w-auto animate-pulse`}
                 >
-                  <TypewriterText text={step >= 7 ? t.p2OpenTerminal : t.openBoardBtn} speed={15} delay={7500} skip={skipTyping} noCursor noGlow />
+                  <TerminalText text={gameStage >= 7 ? t.p2OpenTerminal : t.openBoardBtn} speed={15} delay={7500} skip={skipAll} noCursor noGlow />
                 </button>
               </div>
             </div>
