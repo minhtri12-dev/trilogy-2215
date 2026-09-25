@@ -388,7 +388,6 @@ export default function Season2() {
       p1BoardSubmit: "[ EXTRACT DATA ERROR ]",
       conclusionTitle: ">> FINAL STEP: EXPOSING THE METHOD <<",
       conclusionText: "Correct! The standard barcode 50139 has been validated.\n(Explanation: 5 + 0 + 1 + 3 = 9). By hacking the system to print a 6 instead of a 9, Zodiac forced the scanner's software into an Exception Error, fooling the entire hospital.\n\nTo close the file and clear the nurse, enter the name of the technique/technology used at the final digit that Zodiac exploited:",
-      placeholder: "E.g., Checksum, Barcode...",
       submitBtn: "[ CONCLUDE CASE & CLEAR NAME ]",
       gameOverTitle: "SYSTEM ERASED",
       gameOverDesc: "DEDUCTION FAILED. ZODIAC PERMANENTLY DELETED THE DATA.",

@@ -76,9 +76,9 @@ export default function HubMenu() {
   // Bộ từ điển song ngữ
   const dict = {
     vi: {
-      network: "GLOBAL INTELLIGENCE NETWORK",
+      network: "DETECTIVE UNIVERSE",
       case1Label: "[ LƯU TRỮ ]",
-      case1Desc: "Góc nhìn: ĐẶC VỤ HOLMES | Tình trạng: ĐÃ ĐÓNG",
+      case1Desc: "Góc nhìn: ĐẶC VỤ HOLMES | Tình trạng: ĐÃ HOÀN THIỆN",
       case1Action: "[ TRUY CẬP HỒ SƠ FBI ]",
       case2Label: "[ MỐI ĐE DỌA HIỆN TẠI ]",
       case2Desc: "Góc nhìn: GIÁO SƯ | Tình trạng: ĐANG XÂY DỰNG Ý TƯỞNG",
@@ -90,7 +90,7 @@ export default function HubMenu() {
     en: {
       network: "GLOBAL INTELLIGENCE NETWORK",
       case1Label: "[ ARCHIVE ]",
-      case1Desc: "Perspective: AGENT HOLMES | Status: CLOSED",
+      case1Desc: "Perspective: AGENT HOLMES | Status: COMPLETED",
       case1Action: "[ ACCESS FBI FILES ]",
       case2Label: "[ ACTIVE THREAT ]",
       case2Desc: "Perspective: THE PROFESSOR | Status: DEVELOPING IDEAS",

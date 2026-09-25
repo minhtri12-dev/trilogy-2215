@@ -61,7 +61,6 @@ export default function Home() {
   // MAP STATE: 
   // -3: Click to Start | -2: Trailer | -1: Boot
   // 0: Profile | 1: Load | 2: P1_Docs | 4: P1_Final | 5: Game Over
-  // (Đã xóa state 3 cũ vì dùng sổ tay thay thế)
   // 6: Victory P1 | 7: P2_Docs | 8: P2_Input | 9: Victory P2 | 13: Game Over P2
   // 10: P3_Docs | 11: P3_Matrix (Bomb) | 12: Ultimate End | 14: Game Over P3 | 15: Shutdown
   const [gameStage, setGameStage] = useState(-3); 
@@ -77,29 +76,26 @@ export default function Home() {
   // ==========================================
   const [isNotebookOpen, setIsNotebookOpen] = useState(false);
   const [notebookTab, setNotebookTab] = useState("clues"); // 'clues' or 'deduct'
-  const [collectedClues, setCollectedClues] = useState([]); // Mảng chứa data chứng cứ đã nhặt
+  const [collectedClues, setCollectedClues] = useState([]); 
   
   // 2 Slot để ép thẻ
   const [slot1, setSlot1] = useState(null);
   const [slot2, setSlot2] = useState(null);
   const [deductError, setDeductError] = useState("");
 
-  // Hàm nhét thẻ vào Sổ tay
   const handleSaveClue = (clue) => {
-    // Check xem nhặt chưa, chưa thì push vào mảng
     if (!collectedClues.find(c => c.id === clue.id)) {
       setCollectedClues([...collectedClues, clue]);
     }
   };
 
-  // Ném thẻ vào slot để phân tích
   const assignSlot = (clue) => {
-    setDeductError(""); // clear lỗi
+    setDeductError(""); 
     if (!slot1) setSlot1(clue);
     else if (!slot2 && slot1.id !== clue.id) setSlot2(clue);
   };
 
-  // --- TRẠNG THÁI P1 (Đã dọn sạch ô code 10-5-5) ---
+  // --- TRẠNG THÁI P1 ---
   const [ans_P1_final, setAns_P1_final] = useState("");
   const [errAlertP1, setErrAlertP1] = useState("");
   const [lives_P1, setLives_P1] = useState(3);
@@ -109,7 +105,7 @@ export default function Home() {
   const [errAlertP2, setErrAlertP2] = useState("");
   const [lives_P2, setLives_P2] = useState(3);
 
-  // --- TRẠNG THÁI P3 (BOMB & MATRIX) ---
+  // --- TRẠNG THÁI P3 ---
   const [ans_P3_matrix, setAns_P3_matrix] = useState("");
   const [errAlertP3, setErrAlertP3] = useState("");
   const [lives_P3, setLives_P3] = useState(3);
@@ -159,7 +155,6 @@ export default function Home() {
 
   useEffect(() => {
     let timer = null;
-    // Tạm dừng bom nếu đang mở sổ tay cho player thở tí
     if (gameStage === 11 && bombTimer > 0 && !isNotebookOpen) {
       timer = setInterval(() => setBombTimer((prev) => prev - 1), 1000);
     } else if (gameStage === 11 && bombTimer <= 0) setGameStage(14);
@@ -173,13 +168,12 @@ export default function Home() {
   };
 
   // ==========================================
-  // 📚 TỪ ĐIỂN DATA 
+  // 📚 TỪ ĐIỂN DATA (ĐÃ ĐẦY ĐỦ TIẾNG VIỆT & TIẾNG ANH)
   // ==========================================
   const content = {
     vi: {
       langBtn: "LANG: [VI]",
       backToDocsBtn: "[ QUAY LẠI HỒ SƠ ]",
-      // Text sổ tay mới
       nbBtn: "[ 📓 SỔ TAY ĐIỀU TRA ]",
       nbTab1: "[ QUẢN LÝ MANH MỐI ]",
       nbTab2: "[ BẢNG SUY LUẬN ]",
@@ -208,7 +202,7 @@ export default function Home() {
       profLine2: "Chức vụ: Đặc vụ Cấp cao - Đội Điều Tra Trọng Án",
       profLine3: "Bảo mật: Cấp 5 (Tuyệt mật)",
       profHeader: "[ HỒ SƠ TÂM LÝ & ĐỘNG LỰC ]",
-      profP1: "Holmes từng là một nhà toán học thiên tài. 5 năm trước, kẻ sát nhân tự xưng là Zodiac đã sát hại người thân duy nhất của anh.",
+      profP1: "Holmes từng là một nhà toán học thiên tài. 5 năm trước, kẻ sát nhân tự xưng là Zodiac đã sát hại vợ và con của anh.",
       profP2: "Zodiac không để lại dấu vết ADN. Hắn chỉ để lại những 'bẫy logic' ngoại phạm hoàn hảo được tính toán bằng các con số nhằm chế giễu FBI.",
       profP3: "Holmes gia nhập FBI với một mục tiêu duy nhất: Dùng tư duy sắc lạnh để bẻ gãy mọi bẫy logic, và tự tay đưa Zodiac ra ánh sáng. Bắt đầu từ vụ án gia đình tỷ phú David Vance.",
       profBtn: "[ XÁC NHẬN DANH TÍNH & ĐĂNG NHẬP ]",
@@ -298,7 +292,7 @@ export default function Home() {
       p3Submit: "[ VÔ HIỆU HÓA HỆ THỐNG ]",
 
       season2Title: "KẾT THÚC MÙA 1",
-      season2Desc: "Holmes ngắm chuẩn với súng GLOCK 19M. Viên đạn găm thẳng vào vai trái của Zodiac, nhưng hắn vẫn lao xuống dòng sông ngầm tẩu thoát.\n\n3 năm sau:\nMột gói hàng nặc danh gửi đến Holmes chứa chiếc mặt nạ máu:\n'TA ĐÃ TRỞ LẠI ĐỂ BÁO THÙ...'\n\nVết sẹo trên vai trái vẫn nhói đau. Trò chơi sinh tử lớn hơn sắp bắt đầu.",
+      season2Desc: "Holmes ngắm chuẩn với súng GLOCK 19M. Viên đạn găm thẳng vào vai trái của Zodiac, nhưng hắn vẫn lao xuống dòng sông ngầm tẩu thoát.\n\n10 năm sau:\nMột gói hàng nặc danh gửi đến Holmes chứa chiếc mặt nạ máu:\n'TA ĐÃ TRỞ LẠI ĐỂ BÁO THÙ...'\n\nVết sẹo trên vai trái vẫn nhói đau. Trò chơi sinh tử lớn hơn sắp bắt đầu.",
       season2Footer: "TO BE CONTINUED IN SEASON 2",
       footer: "VỤ ÁN DO MINH TRÍ BIÊN SOẠN"
     },
@@ -312,32 +306,120 @@ export default function Home() {
       savedClueBtn: "[ ✔ SAVED ]",
       deductBtn: "[ ANALYZE LINK ]",
       emptySlot: "SELECT CLUE",
-      // ... (Tương tự phần dịch EN cho ngắn gọn, để nguyên logic text cũ)
-      cinematicLines: ["Washington DC, 2003.", "ZODIAC.", "SOLVE IT."],
-      bootTermLines: ["[ SECURE BOOT v5.0 ]", "WELCOME, AGENT HOLMES."],
-      profTitle: "[ ARCHIVED PERSONNEL FILE - FBI ]",
-      profLine1: "Designation: HOLMES", profLine2: "Role: Senior Agent", profLine3: "Clearance: Level 5",
-      profHeader: "[ PROFILE ]", profP1: "...", profP2: "...", profP3: "...", profBtn: "[ CONFIRM ]",
-      introTitle: "TRILOGY-2215", introSub: "Restricted", bootLogs: ["..."], startButton: "[ INITIALIZE ]",
-      exitBtn: "[ LOGOUT ]", title: "TRILOGY-2215: FATAL ANOMALY", subtitle: "[PART 1]",
-      briefingTitle: ">> BRIEFING <<", briefingLines: ["..."], cards: [
-        { id: 1, title: "[FORENSICS]", tag: "T.O.D", desc: "...", detail: "..." },
-        { id: 2, title: "[STATEMENT]", tag: "SARAH", desc: "...", detail: "..." },
-        { id: 3, title: "[CAMERA]", tag: "HACK", desc: "...", detail: "..." },
-        { id: 4, title: "[RECEIPT]", tag: "TIME", desc: "...", detail: "..." },
-        { id: 5, title: "[GAS PUMP]", tag: "ANOMALY", desc: "...", detail: "..." }
+      
+      cinematicLines: [
+        "Washington DC, 2003.\nA world where secrets never truly disappear.\nUnsolved cases. People vanishing without a trace.\nAnd those behind the shadows... never showing their true faces.",
+        "Years after a series of mysterious murders concluded,\nan old file is unexpectedly reopened.\nNot by the police. Not by the media.\nBut by a signal sent from a system erased from all databases.",
+        "Case File ID:\n2215\n\nA name appears within it.\nZODIAC.",
+        "But this time... he left no letter.\nHe left a game.",
+        "And there is only one way to find the truth:\nSOLVE IT."
       ],
-      gameOverTitle: "SYSTEM LOCKED", gameOverDesc: "FAILED.", rebootBtn: "[ REBOOT ]",
-      conclusionTitle: ">> CONCLUSION <<", conclusionText: "Alibi broken. Answer the system hacked:", placeholder: "Enter system...", submitBtn: "[ CONCLUDE ]",
-      victoryTitle: "TRUTH EXPOSED", victoryDesc: "...", unlockBtn: "[ NEXT PART ]",
-      p2Title: "BLOOD CIPHER", p2Subtitle: "PART 2", p2BriefingTitle: "SCENE 2", p2BriefingLines: ["..."], p2Cards: [
-        { id: 101, title: "AUTOPSY", tag: "KCL", desc: "...", detail: "..." }
-      ], p2OpenTerminal: "[ CIPHER TERMINAL ]", p2TerminalTitle: "CAESAR CIPHER", p2TerminalDesc: "...", p2Placeholder: "...", p2Submit: "[ DECRYPT ]",
-      p2VictoryTitle: "COORDINATES", p2VictoryDesc: "...", p2FinalBtn: "[ PART 3 ]",
-      p3Title: "THE CONVERGENCE", p3Subtitle: "PART 3", p3BriefingTitle: "SECTOR 7", p3BriefingLines: ["..."], p3Cards: [
-        { id: 201, title: "MATRIX", tag: "LOCK", desc: "...", detail: "..." }
-      ], p3OpenTerminal: "[ MATRIX ]", p3TerminalTitle: "MATH LOCK", p3TerminalDesc: "...", p3Placeholder: "...", p3Submit: "[ DISABLE ]",
-      season2Title: "END OF SEASON 1", season2Desc: "...", season2Footer: "...", footer: "MINH TRI"
+      bootTermLines: [
+        "[ SECURE BOOT v5.0 ]",
+        "INITIALIZING...",
+        "IDENTITY VERIFICATION",
+        "████████████████████ 100%",
+        "WELCOME, AGENT HOLMES."
+      ],
+
+      profTitle: "[ ARCHIVED PERSONNEL FILE - FBI ]",
+      profLine1: "Designation: HOLMES (ID: FBI-A042)",
+      profLine2: "Role: Senior Agent - Major Case Squad",
+      profLine3: "Clearance: Level 5 (Top Secret)",
+      profHeader: "[ PSYCHOLOGICAL PROFILE & MOTIVATION ]",
+      profP1: "Holmes was once a genius mathematician. Five years ago, a killer calling himself Zodiac murdered his only remaining family member.",
+      profP2: "Zodiac leaves no DNA traces. He only leaves flawless logical 'traps' calculated with numbers to mock the FBI.",
+      profP3: "Holmes joined the FBI with a single objective: Use a cold, sharp mind to shatter every logic trap, and bring Zodiac to justice with his own hands. Starting with the case of billionaire David Vance's family.",
+      profBtn: "[ CONFIRM IDENTITY & LOGIN ]",
+
+      introTitle: "TRILOGY-2215 // FBI SECURE NETWORK",
+      introSub: "Restricted area. Exclusive to Senior Agent Holmes.",
+      bootLogs: [
+        "Connecting to national server hub...",
+        "Authenticating ID FBI-A042... SUCCESS.",
+        "Welcome back, Agent Holmes.",
+        "Extracting dossier: 'The David Vance Family Murder'...",
+        "System ready. Access granted."
+      ],
+      startButton: "[ OPEN DESK / INITIALIZE ]",
+      exitBtn: "[ LOGOUT ]",
+      title: "TRILOGY-2215: FATAL ANOMALY",
+      subtitle: "[PART 1: LOGIC TRAP - UNDER INVESTIGATION]",
+      
+      briefingTitle: ">> EXTENDED CRIME SCENE REPORT <<",
+      briefingLines: [
+        "CASE ID: HMD-092 | UNIT: FBI Major Case Squad District 4.",
+        "VICTIMS: David Vance, wife Eleanor, and butler Thomas.",
+        "AUTOPSY: Bodies found in a locked bedroom. No signs of struggle. Strangely, the room temperature upon discovery was freezing (Nearly 0°C).",
+        "SECURITY: All security cameras wiped. The perpetrator is highly skilled in IT.",
+        "EVIDENCE: 1 gasoline-powered generator (exactly 5 LITERS capacity) found pumping CO into the AC unit. The fuel tank is COMPLETELY EMPTY."
+      ],
+      
+      cards: [
+        { id: 1, title: "[FORENSIC REPORT]", tag: "T.O.D: 21:45 - 22:15", desc: "Estimated Time of Death (T.O.D) between 21:45 and 22:15 last night based on rigor mortis.", detail: "FORENSIC REPORT (#FB-9921):\n- CO concentration > 70%.\n- Abnormal temperature detected: The cooling system was tampered with down to 0°C immediately after death. This caused rapid freezing, misleading the coroner into miscalculating the death time back by 2 hours (Actual time of death: 00:00 midnight)." },
+        { id: 2, title: "[SUSPECT STATEMENT]", tag: "SUBJECT: SARAH", desc: "Sarah claims: Left the mansion at 21:00 in a Porsche (Max capacity 45L) heading downtown.", detail: "INTERROGATION TRANSCRIPT:\n- Sarah insists she drove away alone at 21:00.\n- She has no knowledge of her credit card being swiped at 22:12 at a suburban gas station." },
+        { id: 3, title: "[TRAFFIC CAMERA]", tag: "RED HERRING", desc: "Porsche passed the toll booth at 21:30. Camera clock hacked, running 5 minutes fast.", detail: "SECURITY FOOTAGE CAM #4:\n- Footage records the Porsche passing at 21:30.\n- Server logs show the hacked camera clock ran 5 minutes fast (Actual passage time: 21:25).\n- The drive from the mansion to the toll booth takes only 15 minutes." },
+        { id: 4, title: "[SUPERMARKET RECEIPT]", tag: "TIME: 22:10", desc: "Transaction at 22:10. Sarah's card paid for supplies downtown.", detail: "ELECTRONIC RECEIPT:\n- Time: 22:10 at Downtown Supermarket.\n- A masterstroke by the killer to build a fake alibi for the cardholder." },
+        { id: 5, title: "[GAS STATION RECEIPT]", tag: "STATUS: ANOMALY", desc: "Gas station logs show Sarah's card paying for exactly 50 LITERS of gas at 22:12.", detail: "PUMP #7 DATA:\n- Time: 22:12.\n- Fuel pumped: 50 Liters.\n- ABSURDITY: Sarah's Porsche registration manual explicitly states the max fuel tank capacity is strictly 45 Liters." }
+      ],
+
+      gameOverTitle: "SYSTEM LOCKED",
+      gameOverDesc: "REASONING FAILED. SECURITY PROTOCOL SELF-DESTRUCTED.",
+      rebootBtn: "[ REBOOT SYSTEM ]",
+
+      conclusionTitle: ">> FINAL STEP: EXPOSE THE METHOD <<",
+      conclusionText: "The Logic Triangle alibi has been shattered!\nThe gas station car pumped 50 Liters, but Sarah's real car only holds 45 Liters. The travel time is off by 10 minutes. The perpetrator cloned the card, forged license plates, and rented another Porsche to hide the real car, framing Sarah.\n\nBUT to make the plan foolproof, he needed to manipulate the time of death. Answer the final question: Which smart home system in the mansion was hacked by the killer to drop the room temperature to 0°C?",
+      placeholder: "Enter system name...",
+      submitBtn: "[ CONCLUDE CASE ]",
+      
+      victoryTitle: "TRUTH EXPOSED",
+      victoryDesc: "Brilliant deduction, Holmes! The perpetrator is none other than ZODIAC. He orchestrated a vicious masterpiece of crime:\n\nZodiac pumped CO to murder the Vances at 00:00. He hacked the Smarthome to DROP ROOM TEMP TO 0°C, speeding up corpse freezing, tricking the coroner into pushing T.O.D back to 21:45 to match Sarah's fake alibi.\n\nRealizing his framing plot failed due to your deduction notebook, Zodiac immediately broke into Sarah's home, forcing her death to silence witnesses.\n\nZodiac has vanished, leaving behind a blood-soaked folded note at Sarah's house...",
+      unlockBtn: "[ UNLOCK PART 2: THE BLOODY CIPHER ]",
+
+      // --- PHẦN 2 ---
+      p2Title: "TRILOGY-2215: THE BLOODY CIPHER",
+      p2Subtitle: "[PART 2: ZODIAC'S PROVOCATION]",
+      p2BriefingTitle: ">> SECOND CRIME SCENE: SARAH'S LUXURY APARTMENT <<",
+      p2BriefingLines: [
+        "LOCATION: Independent apartment complex in the western district of the city.",
+        "CRIME SCENE CLUE: Her stiffened hand still clutches a crumpled, dried blood-stained note — a direct message left exclusively by Zodiac for Holmes's mind."
+      ],
+      p2Cards: [
+        { id: 101, title: "[FORENSIC REPORT P.2]", tag: "CAUSE: KCL", desc: "Confirmed Sarah died from an injection of Potassium Chloride (KCl) solution.", detail: "SARAH AUTOPSY FILE (#AUT-881):\n- Biological traces: A faint needle mark on the left wrist. No fingerprints of Sarah found on the syringe." },
+        { id: 103, title: "[BLOODY NOTE]", tag: "BLOODY_NOTE.PNG", desc: "Zodiac's blood letter sent directly to Holmes containing a bizarre cipher.", detail: "CIPHER ANALYSIS:\n- Uppercase character sequence using classical Caesar Cipher:\n  W K L V - L V - M X V W - W K H - E H J L Q Q L Q J" },
+        { id: 104, title: "[USB ON THE LOFT]", tag: "HIDDEN_SYMBOL.PNG", desc: "A USB drive placed on the desk, recording the shadow of Zodiac leaving the apartment.", detail: "SECURITY FOOTAGE:\n- Video file captures a hooded, masked figure calmly stepping out the door at 03:15." }
+      ],
+      p2OpenTerminal: "[ CIPHER DECRYPTION TERMINAL ]",
+      p2TerminalTitle: ">> CAESAR CIPHER DECRYPTION DESK <<",
+      p2TerminalDesc: "Caesar ciphers always require a shift key number. Find the **total number of lives** taken during that freezing night at the Vance mansion (Part 1 Case) to use as the backward shift Key.\n\nCiphertext: W K L V - L V - M X V W - W K H - E H J L Q Q L Q J",
+      p2Placeholder: "Enter decrypted message...",
+      p2Submit: "[ DECRYPT & LOCATE COORDINATES ]",
+      p2VictoryTitle: "COORDINATES CONFIRMED",
+      p2VictoryDesc: "Outstanding, Agent Holmes!\nThe shift Key is 3 (Corresponding to the 3 victims of the Vance family). Shifting back 3 steps, the message decrypts to:\n\n'THIS IS JUST THE BEGINNING'\n\nRadar signals detected the hidden USB connected to Sector 7 station. Zodiac is waiting for you there!",
+      p2FinalBtn: "[ READY TO LAUNCH PART 3 ]",
+
+      // --- PHẦN 3 ---
+      p3Title: "TRILOGY-2215: THE ULTIMATE CONVERGENCE",
+      p3Subtitle: "[PART 3: THE FINAL BATTLE]",
+      p3BriefingTitle: ">> SECTOR 7 WASTEWATER TREATMENT PLANT <<",
+      p3BriefingLines: [
+        "STATUS: In the center of the room, a neurotoxin dissemination device is counting down.",
+        "DEFENSE SYSTEM: Sector 7 is locked tightly via Mathematical Matrix. 3 incorrect entries will trigger the poison gas release valves, burying the entire tactical squad."
+      ],
+      p3Cards: [
+        { id: 201, title: "[CONTROL MONITOR]", tag: "MATRIX LOCK", desc: "Industrial screen displaying the matrix sequence:\n88 → 69 → 19 → 1311 → 1330 → [ ? ]", detail: "DATA LOG (#CRT-01):\n- 'Mathematics never lies, but death can. Find the missing final number'.\n- 88 → 69 → 19 → 1311 → 1330 → [ ? ]." },
+        { id: 203, title: "[ZODIAC'S NOTE]", tag: "ZODIAC'S NOTE", desc: "A malicious message carved into the metal wall.", detail: "MESSAGE:\n- 'The law of this world is the manipulation among those standing before you. Addition, Subtraction, Multiplication, Division... all are tools of Death.'" }
+      ],
+      p3OpenTerminal: "[ ACCESS MATRIX LOCK ]",
+      p3TerminalTitle: ">> MATHEMATICAL MATRIX LOCK <<",
+      p3TerminalDesc: "SYSTEM COUNTDOWN ACTIVE. Find the final missing number:\n\n88 → 69 → 19 → 1311 → 1330 → [ ? ]",
+      p3Placeholder: "Enter answer number...",
+      p3Submit: "[ DISABLE SYSTEM ]",
+
+      season2Title: "END OF SEASON 1",
+      season2Desc: "Holmes took aim with his GLOCK 19M. The bullet struck Zodiac's left shoulder, but he still plunged into the underground river and escaped.\n\n10 years later:\nAn anonymous package sent to Holmes containing a bloody mask:\n'I HAVE RETURNED FOR REVENGE...'\n\nThe scar on his left shoulder still aches. A larger game of life and death is about to begin.",
+      season2Footer: "TO BE CONTINUED IN SEASON 2",
+      footer: "CASE WRITTEN BY MINH TRI"
     }
   };
 
@@ -355,17 +437,14 @@ export default function Home() {
   // ==========================================
   // 🧠 GAME LOGIC HANDLERS
   // ==========================================
-
-  // --- LOGIC PHÂN TÍCH SỔ TAY (DEDUCTION) ---
   const handleDeduction = () => {
     if (!slot1 || !slot2) {
       setDeductError(locale === "vi" ? "Cần 2 mảnh ghép để phân tích." : "Need 2 clues.");
       return;
     }
 
-    const ids = [slot1.id, slot2.id].sort((a,b) => a - b); // Sắp xếp ID bé tới lớn cho dễ check
+    const ids = [slot1.id, slot2.id].sort((a,b) => a - b); 
     
-    // CÔNG THỨC 1: Lời khai xe 45L (ID:2) + Trạm xăng 50L (ID:5)
     if (ids[0] === 2 && ids[1] === 5) {
       if (!collectedClues.find(c => c.id === 1001)) {
         setCollectedClues([...collectedClues, {
@@ -378,7 +457,6 @@ export default function Home() {
         setSlot1(null); setSlot2(null);
       } else { setDeductError(locale === "vi" ? "Đã suy luận ra liên kết này rồi." : "Already deduced."); }
     }
-    // CÔNG THỨC 2: Lời khai đi 21h (ID:2) + Camera trễ 5p ghi nhận qua trạm lúc 21:30 (ID:3)
     else if (ids[0] === 2 && ids[1] === 3) {
       if (!collectedClues.find(c => c.id === 1002)) {
         setCollectedClues([...collectedClues, {
@@ -391,12 +469,10 @@ export default function Home() {
         setSlot1(null); setSlot2(null);
       } else { setDeductError(locale === "vi" ? "Đã suy luận ra liên kết này rồi." : "Already deduced."); }
     }
-    // CÔNG THỨC 3 (CHIẾN THẮNG P1): Tang vật 5 Lít (1001) + Góc khuất 10 phút (1002)
     else if (ids[0] === 1001 && ids[1] === 1002) {
-      setIsNotebookOpen(false); // Tắt sổ tay
-      setGameStage(4); // Chuyển sang màn chốt chữ "smarthome"
+      setIsNotebookOpen(false); 
+      setGameStage(4); 
     }
-    // NẾU NỐI SAI:
     else {
       let newHp = lives_P1 - 1;
       setLives_P1(newHp);
@@ -452,9 +528,6 @@ export default function Home() {
     }
   };
 
-  // ==========================================
-  // 🖥️ UI COMPONENTS (Top Bar & Footer)
-  // ==========================================
   const TopStatusBar = () => (
     <div className="flex justify-between items-center w-full mb-8 pb-4 border-b border-zinc-800 relative z-50">
       <div className="flex items-center gap-4">
@@ -478,12 +551,6 @@ export default function Home() {
       </span>
     </div>
   );
-
-  // ==========================================
-  // 🎬 RENDER CÁC MÀN CINEMATIC & GAME OVER (Duy trì y hệt)
-  // ==========================================
-  // ... (Giữ nguyên đoạn code render step -3, -2, -1, 15, 0, 1, 5, 13, 14, 6, 9, 12 như cũ, chỉ rút gọn dòng ở đây để focus vào phần mới) ...
-  // DO YÊU CẦU ĐƯA FULL CODE, TÔI KHÔNG CẮT BỚT:
 
   if (gameStage === -3) {
     return (
@@ -609,7 +676,6 @@ export default function Home() {
     );
   }
 
-  // --- GAME OVER ---
   if (gameStage === 5 || gameStage === 13 || gameStage === 14) {
     let title = t.gameOverTitle;
     let desc = t.gameOverDesc;
@@ -640,7 +706,6 @@ export default function Home() {
     );
   }
 
-  // --- VICTORY & ENDING ---
   if (gameStage === 6) {
     return (
       <main onClick={() => setSkipAll(true)} className="min-h-screen w-full overflow-y-auto overflow-x-hidden relative bg-black text-slate-100">
@@ -709,16 +774,11 @@ export default function Home() {
     );
   }
 
-
-  // ==========================================
-  // 🟢 UI CHÍNH - DASHBOARD GAME
-  // ==========================================
   return (
     <main onClick={() => setSkipAll(true)} className={`min-h-screen w-full overflow-y-auto overflow-x-hidden relative ${getBackgroundClass()} bg-cover bg-center bg-fixed text-slate-100 transition-all duration-1000 flex flex-col`}>
       <div className="fixed inset-0 bg-black/70 z-0 pointer-events-none"></div>
       <div className="fixed inset-0 scanlines z-0 pointer-events-none opacity-50"></div>
 
-      {/* --- NÚT SỔ TAY NỔI --- */}
       {gameStage === 2 && (
         <button 
           onClick={(e) => { e.stopPropagation(); setIsNotebookOpen(true); }}
@@ -741,12 +801,11 @@ export default function Home() {
             </h1>
           </div>
           <div className="flex gap-4 z-50 mt-4 md:mt-0">
-             <button onClick={(e) => { e.stopPropagation(); window.location.href = '/'; }} className={`px-4 py-2 border border-zinc-800 bg-black hover:${theme.borderActive} hover:${theme.primaryText} text-xs font-mono rounded cursor-pointer`}>{t.exitBtn}</button>
+             <button onClick={(e) => { e.stopPropagation(); window.location.href = '/'; }} className="px-4 py-2 border border-zinc-800 bg-black hover:border-cyan-400 hover:text-cyan-400 text-xs font-mono rounded cursor-pointer transition-all">{t.exitBtn}</button>
              <button onClick={(e) => { e.stopPropagation(); setLocale(locale === "vi" ? "en" : "vi"); }} className="px-4 py-2 border border-zinc-700 bg-zinc-900 hover:border-cyan-400 hover:text-cyan-400 text-xs font-mono transition-all rounded cursor-pointer">{t.langBtn}</button>
           </div>
         </header>
 
-        {/* CÁC FORM NHẬP INPUT MÀN KHÁC */}
         {gameStage === 4 ? (
           <div className="max-w-3xl mx-auto mt-12 bg-zinc-950/90 border border-cyan-400 p-6 md:p-8 rounded shadow-[0_0_50px_rgba(56,189,248,0.2)] backdrop-blur-md mb-16 animate-fade-in flex flex-col w-full relative z-10">
             <h2 className="text-xl font-bold font-mono text-cyan-400 mb-6 [text-shadow:0_0_8px_rgba(34,211,238,0.8)]"><TerminalText text={t.conclusionTitle} speed={20} skip={skipAll} /></h2>
@@ -797,7 +856,6 @@ export default function Home() {
             </form>
           </div>
         ) : (
-          /* MÀN HIỂN THỊ DANH SÁCH CHỨNG CỨ */
           <>
             <div className={`mb-10 p-6 bg-zinc-950/80 border ${gameStage >= 10 ? 'border-amber-900/60' : (gameStage >= 7 ? 'border-red-900/60' : 'border-cyan-900/60')} rounded flex flex-col h-auto relative z-10`}>
               <h2 className={`text-md font-bold font-mono ${gameStage >= 10 ? 'text-amber-500' : (gameStage >= 7 ? 'text-red-500' : 'text-amber-500')} mb-4 border-b border-zinc-800 pb-2`}>
@@ -830,7 +888,6 @@ export default function Home() {
               })}
             </div>
 
-            {/* Nút mở Form cho SS1 P2 và P3 (Bỏ P1 vì dùng sổ tay) */}
             {gameStage >= 7 && (
               <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black via-black/90 to-transparent flex justify-center z-40">
                 <button 
@@ -846,7 +903,6 @@ export default function Home() {
         <div className="mt-auto pt-8"><CopyrightFooter /></div>
       </div>
 
-      {/* --- MODAL ĐỌC CHỨNG CỨ (CÓ NÚT LƯU VÀO SỔ TAY) --- */}
       {activeDoc && (
         <div onClick={(e) => { e.stopPropagation(); setActiveDoc(null); }} className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 md:p-8 z-[150] overflow-y-auto cursor-pointer">
           <div onClick={(e) => e.stopPropagation()} className={`bg-zinc-950 border ${gameStage >= 10 ? 'border-amber-500' : (gameStage >= 7 ? 'border-red-500' : 'border-cyan-400')} w-full max-w-2xl max-h-full overflow-y-auto p-6 md:p-8 rounded font-mono shadow-[0_0_40px_rgba(56,189,248,0.2)] relative mt-10 mb-10 cursor-default`}>
@@ -862,7 +918,6 @@ export default function Home() {
                 {locale === "vi" ? "[ ĐÓNG ]" : "[ CLOSE ]"}
               </button>
               
-              {/* Nút lưu sổ tay (Chỉ xuất hiện ở Phần 1) */}
               {gameStage === 2 && (
                 <button 
                   onClick={() => handleSaveClue(activeDoc)}
@@ -876,12 +931,10 @@ export default function Home() {
         </div>
       )}
 
-      {/* --- MODAL SỔ TAY ĐIỀU TRA --- */}
       {isNotebookOpen && (
         <div onClick={(e) => { e.stopPropagation(); setIsNotebookOpen(false); }} className="fixed inset-0 bg-black/90 backdrop-blur-md z-[200] flex justify-center items-center p-4 md:p-8 cursor-pointer">
           <div onClick={(e) => e.stopPropagation()} className="w-full max-w-5xl bg-zinc-950 border border-amber-600 rounded flex flex-col shadow-[0_0_50px_rgba(245,158,11,0.2)] cursor-default" style={{ height: '85vh' }}>
             
-            {/* Header Sổ Tay */}
             <div className="flex justify-between items-end p-6 border-b border-zinc-800 bg-black/50">
                <div className="flex gap-2 md:gap-6 flex-wrap">
                   <button onClick={()=>setNotebookTab('clues')} className={`px-4 py-2 font-mono text-sm md:text-base font-bold tracking-widest transition-all ${notebookTab==='clues' ? 'text-amber-400 border-b-2 border-amber-400' : 'text-zinc-600 hover:text-amber-200'}`}>
@@ -896,9 +949,7 @@ export default function Home() {
                </button>
             </div>
 
-            {/* Body Sổ Tay */}
             <div className="flex-1 overflow-auto p-6 md:p-8 custom-scrollbar">
-               {/* TAB 1: DANH SÁCH MANH MỐI */}
                {notebookTab === 'clues' && (
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {collectedClues.length === 0 ? (
@@ -915,10 +966,8 @@ export default function Home() {
                  </div>
                )}
 
-               {/* TAB 2: BẢNG SUY LUẬN */}
                {notebookTab === 'deduct' && (
                   <div className="flex flex-col h-full items-center font-mono">
-                     {/* Khu vực phân tích */}
                      <div className="w-full max-w-3xl bg-black/60 border border-cyan-900/50 p-6 md:p-10 rounded mb-8 flex flex-col items-center">
                         <p className="text-cyan-600 text-xs tracking-widest mb-6 uppercase text-center">Bấm vào manh mối bên dưới để đưa lên bàn phân tích</p>
                         
@@ -941,7 +990,6 @@ export default function Home() {
                         </button>
                      </div>
 
-                     {/* Kho đồ */}
                      <div className="w-full max-w-3xl border-t border-zinc-800 pt-6">
                         <p className="text-zinc-500 text-xs mb-4">KHO MANH MỐI:</p>
                         <div className="flex flex-wrap gap-3">
@@ -964,7 +1012,6 @@ export default function Home() {
         </div>
       )}
       
-      {/* CSS cho Scrollbar */}
       <style dangerouslySetInnerHTML={{__html: `
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
