@@ -989,7 +989,7 @@ export default function Season2() {
             </h1>
           </div>
           <div className="flex gap-4 mt-4 md:mt-0 z-50">
-             <button onClick={(e) => { e.stopPropagation(); setGameStage(0); }} className={`px-4 py-2 border border-zinc-800 bg-black hover:${theme.borderActive} hover:${theme.primaryText} text-xs font-mono rounded cursor-pointer`}>{t.exitBtn}</button>
+             <button onClick={(e) => { e.stopPropagation(); window.location.href = '/'; }} className={`px-4 py-2 border border-zinc-800 bg-black hover:${theme.borderActive} hover:${theme.primaryText} text-xs font-mono rounded cursor-pointer`}>{t.exitBtn}</button>
              <button onClick={(e) => { e.stopPropagation(); setLocale(locale === "vi" ? "en" : "vi"); }} className={`px-4 py-2 border border-zinc-800 bg-black hover:border-sky-500 hover:text-sky-400 text-xs font-mono rounded cursor-pointer`}>{t.langBtn}</button>
           </div>
         </header>
